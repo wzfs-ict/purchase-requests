@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Purchase Requests</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231f4e79'/><path d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --surface-2: #f0f2f5; --border: #dde1e6;
+    --text: #1d2430; --muted: #5d6675; --accent: #1f4e79; --accent-ink: #ffffff;
+    --accent-soft: #e6eef6; --ok: #1d7a46; --ok-soft: #e3f3ea; --warn: #9a5b00; --warn-soft: #fbf0dc;
+    --bad: #b3261e; --bad-soft: #fbe7e5; --radius: 10px;
+    --font: "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c; --surface: #1c2027; --surface-2: #232831; --border: #343a45;
+      --text: #e6e9ee; --muted: #a0a8b5; --accent: #7fb2e5; --accent-ink: #0c1724;
+      --accent-soft: #1e2d3d; --ok: #6fcf97; --ok-soft: #173326; --warn: #f2c26b; --warn-soft: #3a2d14;
+      --bad: #f28b82; --bad-soft: #3d1c1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); }
+  a { color: var(--accent); }
+  header.top { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .top-inner { max-width: 1200px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .brand { font-weight: 650; font-size: 17px; margin-right: auto; }
+  .brand small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+  .who { color: var(--muted); font-size: 13.5px; }
+  nav.tabs { max-width: 1200px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.tabs button { border: 0; background: none; padding: 10px 14px; font: inherit; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+  nav.tabs button[aria-current="page"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 24px 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 18px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .grid .wide { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; color: var(--muted); }
+  label > span { display: block; margin-bottom: 3px; }
+  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; }
+  textarea { min-height: 60px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--bad); }
+  .btn.small { padding: 4px 9px; font-size: 13px; }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  .stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .stat .k { font-size: 12.5px; color: var(--muted); }
+  .stat .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 600; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.total td { font-weight: 650; background: var(--surface-2); }
+  tr.group td { background: var(--accent-soft); font-weight: 650; }
+  .badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .badge.info { background: var(--accent-soft); color: var(--accent); }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .reason { max-width: 340px; white-space: pre-wrap; }
+  .item-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; background: var(--surface); position: relative; }
+  .item-card .remove { position: absolute; top: 8px; right: 8px; }
+  .item-card .line-total { font-weight: 650; font-variant-numeric: tabular-nums; padding-top: 22px; }
+  .notice { padding: 10px 14px; border-radius: var(--radius); margin-bottom: 14px; border: 1px solid var(--border); background: var(--surface); }
+  .notice.error { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .saving { font-size: 12px; color: var(--muted); min-height: 16px; }
+  .center { text-align: center; padding: 60px 16px; }
+  .sticky-actions { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--border); }
+  ol.steps li { margin-bottom: 10px; }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .print-only { display: none; }
+  @media (max-width: 640px) { th, td { padding: 7px 8px; } .stat .v { font-size: 19px; } }
+  @media print {
+    body { background: #fff; color: #000; font-size: 12px; }
+    header.top, nav.tabs, .no-print, .sticky-actions, .filters { display: none !important; }
+    .print-only { display: block; }
+    main { max-width: none; padding: 0; }
+    .table-wrap, .stat, .card { border-color: #bbb; break-inside: avoid; }
+    select, input, textarea { border: 0; padding: 0; appearance: none; background: none; }
+    tr.group td { background: #eef2f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">Purchase Requests<small id="schoolName"></small></div>
+    <div class="who" id="who"></div>
+    <div id="authBtn"></div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main id="main"><div class="center muted">Loading…</div></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script>
+"use strict";
+const C = window.APP_CONFIG;
+const GRAPH = "https://graph.microsoft.com/v1.0";
+const SCOPES = ["User.Read", "Sites.ReadWrite.All"];
+const SETUP_SCOPES = ["User.Read", "Sites.ReadWrite.All", "Sites.Manage.All"];
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const lc = s => String(s || "").trim().toLowerCase();
+
+const S = {
+  account: null, email: "", name: "", role: "hod", isAdmin: false, viewAs: null,
+  siteId: C.siteId || "", siteUrl: "", reqListId: C.requestsListId || "", revListId: "",
+  reqListUrl: "", revListUrl: "",
+  requests: [], reviews: new Map(), tab: null,
+  filters: { year: C.academicYears[0], semester: "All", department: "All", forwardedOnly: true },
+  flash: null,
+};
+
+// ── Formatting ──────────────────────────────────────────────
+const money = n => "¥" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const opts = (list, sel, withAll) => (withAll ? [`<option value="All"${sel === "All" ? " selected" : ""}>All</option>`] : [])
+  .concat(list.map(v => `<option${v === sel ? " selected" : ""}>${esc(v)}</option>`)).join("");
+const safeUrl = u => /^https?:\/\//i.test(String(u || "").trim()) ? String(u).trim() : "";
+const link = (u, label) => safeUrl(u) ? `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${esc(label)}</a>` : "";
+const fmtDate = d => d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+
+// ── Auth ────────────────────────────────────────────────────
+const redirectUri = location.origin + location.pathname.replace(/index\.html$/, "");
+let pca;
+
+async function initAuth() {
+  pca = new msal.PublicClientApplication({
+    auth: { clientId: C.clientId, authority: `https://login.microsoftonline.com/${C.tenantId}`, redirectUri },
+    cache: { cacheLocation: "localStorage" },
+  });
+  await pca.initialize();
+  const res = await pca.handleRedirectPromise();
+  S.account = (res && res.account) || pca.getAllAccounts()[0] || null;
+  if (S.account) pca.setActiveAccount(S.account);
+}
+
+async function token(scopes = SCOPES) {
+  try {
+    return (await pca.acquireTokenSilent({ scopes, account: S.account })).accessToken;
+  } catch (e) {
+    if (e instanceof msal.InteractionRequiredAuthError) {
+      await pca.acquireTokenRedirect({ scopes, account: S.account });
+      return new Promise(() => {}); // page is navigating away
+    }
+    throw e;
+  }
+}
+
+async function graph(method, path, body, scopes) {
+  const t = await token(scopes);
+  const r = await fetch(path.startsWith("http") ? path : GRAPH + path, {
+    method,
+    headers: { Authorization: "Bearer " + t, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!r.ok) {
+    let msg = r.statusText;
+    try { const j = await r.json(); msg = (j.error && j.error.message) || msg; } catch (_) {}
+    const err = new Error(`${msg} (HTTP ${r.status})`);
+    err.status = r.status;
+    throw err;
+  }
+  return r.status === 204 ? null : r.json();
+}
+
+async function graphAll(path) {
+  let out = [], next = path;
+  while (next) {
+    const j = await graph("GET", next);
+    out = out.concat(j.value || []);
+    next = j["@odata.nextLink"];
+  }
+  return out;
+}
+
+// ── Roles ───────────────────────────────────────────────────
+function detectRole() {
+  const e = S.email;
+  S.isAdmin = C.admins.map(lc).includes(e);
+  if (C.chairmen.map(lc).includes(e)) S.role = "chairman";
+  else if (C.principals.map(lc).includes(e)) S.role = "principal";
+  else S.role = "hod";
+}
+const role = () => S.viewAs || S.role;
+const lockedDept = () => {
+  const m = Object.fromEntries(Object.entries(C.hods || {}).map(([k, v]) => [lc(k), v]));
+  return m[S.email] || "";
+};
+
+// ── Data ────────────────────────────────────────────────────
+async function resolveSite() {
+  if (!S.siteId) {
+    const site = await graph("GET", `/sites/${C.siteHostname}:${C.sitePath}?$select=id,webUrl`);
+    S.siteId = site.id; S.siteUrl = site.webUrl;
+  } else if (!S.siteUrl) {
+    S.siteUrl = `https://${C.siteHostname}${C.sitePath}`;
+  }
+  const lists = await graphAll(`/sites/${S.siteId}/lists?$select=id,displayName,webUrl`);
+  const req = lists.find(l => l.displayName === C.requestsList);
+  const rev = lists.find(l => l.displayName === C.reviewsList);
+  if (req) { S.reqListId = req.id; S.reqListUrl = req.webUrl; }
+  if (rev) { S.revListId = rev.id; S.revListUrl = rev.webUrl; }
+}
+
+function mapRequest(it) {
+  const f = it.fields || {};
+  const by = (it.createdBy && it.createdBy.user) || {};
+  return {
+    id: String(it.id), modified: it.lastModifiedDateTime, created: it.createdDateTime,
+    author: by.displayName || "", authorEmail: lc(by.email),
+    item: f.Title || "", department: f.Department || "", year: f.AcademicYear || "", semester: f.Semester || "",
+    category: f.Category || "", qty: Number(f.Quantity) || 0, unit: Number(f.UnitPrice) || 0,
+    total: Number(f.LineTotal) || 0, supplier: f.Supplier || "", supplierLink: f.SupplierLink || "",
+    reason: f.Reason || "", priority: f.Priority || "", quote: f.QuoteLink || "", status: f.RequestStatus || "Draft",
+  };
+}
+function mapReview(it) {
+  const f = it.fields || {};
+  return {
+    id: String(it.id), requestId: String(f.RequestId || ""),
+    rec: f.PrincipalRecommendation || "", comment: f.PrincipalComment || "", forward: !!f.ForwardToChairman,
+    decision: f.ChairmanDecision || "Pending", approved: f.ApprovedAmount ?? "", note: f.ChairmanNote || "",
+    decidedAt: f.DecidedAt || "", decidedVersion: f.DecidedRequestVersion || "",
+  };
+}
+
+async function loadData() {
+  if (!S.reqListId || (role() !== "hod" && !S.revListId) || (S.isAdmin && !S.siteUrl)) await resolveSite();
+  if (!S.reqListId) throw Object.assign(new Error("The “" + C.requestsList + "” list was not found."), { setup: true });
+  const items = await graphAll(`/sites/${S.siteId}/lists/${S.reqListId}/items?$expand=fields&$top=500`);
+  S.requests = items.map(mapRequest).sort((a, b) => a.department.localeCompare(b.department) || a.created.localeCompare(b.created));
+  S.reviews = new Map();
+  if (role() !== "hod" && S.revListId) {
+    const revs = await graphAll(`/sites/${S.siteId}/lists/${S.revListId}/items?$expand=fields&$top=500`);
+    revs.map(mapReview).forEach(r => S.reviews.set(r.requestId, r));
+  }
+}
+
+function requestFields(r) {
+  return {
+    Title: r.item, Department: r.department, AcademicYear: r.year, Semester: r.semester, Category: r.category,
+    Quantity: r.qty, UnitPrice: r.unit, LineTotal: Math.round(r.qty * r.unit * 100) / 100,
+    Supplier: r.supplier, SupplierLink: r.supplierLink, Reason: r.reason, Priority: r.priority,
+    QuoteLink: r.quote, RequestStatus: r.status,
+  };
+}
+const nowIso = () => new Date().toISOString();
+const createRequest = r => graph("POST", `/sites/${S.siteId}/lists/${S.reqListId}/items`,
+  { fields: { ...requestFields(r), ...(r.status === "Submitted" ? { SubmittedAt: nowIso() } : {}) } });
+const updateRequest = (id, fields) => graph("PATCH", `/sites/${S.siteId}/lists/${S.reqListId}/items/${id}/fields`, fields);
+const deleteRequest = id => graph("DELETE", `/sites/${S.siteId}/lists/${S.reqListId}/items/${id}`);
+
+// Review saves are queued per request so two quick edits never create two review rows.
+const reviewQueue = new Map();
+function saveReview(requestId, patch) {
+  const prev = reviewQueue.get(requestId) || Promise.resolve();
+  const next = prev.catch(() => {}).then(async () => {
+    const existing = S.reviews.get(requestId);
+    if (existing) {
+      await graph("PATCH", `/sites/${S.siteId}/lists/${S.revListId}/items/${existing.id}/fields`, patch);
+      Object.assign(existing, mapReview({ id: existing.id, fields: { ...toReviewFields(existing), ...patch } }));
+    } else {
+      const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== null && v !== ""));
+      const it = await graph("POST", `/sites/${S.siteId}/lists/${S.revListId}/items`,
+        { fields: { Title: "Request " + requestId, RequestId: Number(requestId), ChairmanDecision: "Pending", ...clean } });
+      S.reviews.set(requestId, mapReview(it));
+    }
+  });
+  reviewQueue.set(requestId, next);
+  return next;
+}
+function toReviewFields(r) {
+  return {
+    RequestId: Number(r.requestId), PrincipalRecommendation: r.rec, PrincipalComment: r.comment,
+    ForwardToChairman: r.forward, ChairmanDecision: r.decision, ApprovedAmount: r.approved,
+    ChairmanNote: r.note, DecidedAt: r.decidedAt, DecidedRequestVersion: r.decidedVersion,
+  };
+}
+const reviewOf = id => S.reviews.get(String(id)) || { rec: "", comment: "", forward: false, decision: "Pending", approved: "", note: "", decidedVersion: "" };
+const editedAfterDecision = r => {
+  const v = reviewOf(r.id);
+  return v.decision !== "Pending" && v.decidedVersion && new Date(r.modified) > new Date(v.decidedVersion);
+};
+
+// ── Shell ───────────────────────────────────────────────────
+const TABS = {
+  hod: [["mine", "My requests"], ["new", "New request"]],
+  principal: [["review", "Review requests"], ["report", "Chairman report"]],
+  chairman: [["report", "Report & decisions"], ["review", "All requests"]],
+};
+const ROLE_LABEL = { hod: "Head of Department", principal: "Principal", chairman: "Chairman" };
+
+function renderShell() {
+  $("#schoolName").textContent = C.schoolName;
+  if (!S.account) { $("#who").textContent = ""; $("#authBtn").innerHTML = ""; $("#tabs").innerHTML = ""; return; }
+  $("#who").innerHTML = `${esc(S.name)} · <span class="badge info">${ROLE_LABEL[role()]}</span>` +
+    (S.isAdmin ? ` <select id="viewAs" class="small" style="width:auto;padding:2px 6px" title="Preview the page as another role (does not change what SharePoint lets you see)">
+      <option value="">View as: me</option>${["hod", "principal", "chairman"].map(r => `<option value="${r}"${S.viewAs === r ? " selected" : ""}>View as: ${ROLE_LABEL[r]}</option>`).join("")}</select>` : "");
+  $("#authBtn").innerHTML = `<button class="btn small" id="signOut">Sign out</button>`;
+  $("#signOut").onclick = () => pca.logoutRedirect({ account: S.account });
+  if ($("#viewAs")) $("#viewAs").onchange = async e => { S.viewAs = e.target.value || null; S.tab = null; await refresh(); };
+  const tabs = TABS[role()].concat(S.isAdmin ? [["setup", "Setup"]] : []);
+  if (!S.tab || !tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
+  $("#tabs").innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}"${k === S.tab ? ' aria-current="page"' : ""}>${l}</button>`).join("");
+  $$("#tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; S.flash = null; renderShell(); render(); });
+}
+
+function flashHtml() {
+  if (!S.flash) return "";
+  const f = S.flash; S.flash = null;
+  return `<div class="notice ${f.type}">${esc(f.text)}</div>`;
+}
+
+function render() {
+  const m = $("#main");
+  const views = { mine: viewMine, new: viewForm, review: viewReview, report: viewReport, setup: viewSetup };
+  m.innerHTML = flashHtml() + views[S.tab]();
+  (BIND[S.tab] || (() => {}))(m);
+}
+
+async function refresh(msg) {
+  renderShell();
+  $("#main").innerHTML = `<div class="center muted">Loading requests…</div>`;
+  try {
+    await loadData();
+    if (msg) S.flash = msg;
+  } catch (e) {
+    if (S.tab !== "setup") {
+      $("#main").innerHTML = errorHtml(e);
+      return;
+    }
+    S.flash = { type: "warn", text: e.message };
+  }
+  render();
+}
+
+function errorHtml(e) {
+  const hint = e.status === 403 || e.status === 404
+    ? "You may not have been given access to the purchase request site yet. Please contact the ICT coordinator."
+    : e.setup ? "An administrator needs to finish setup (Setup tab)." : "";
+  return `<div class="notice error">${esc(e.message)}</div><p class="muted">${esc(hint)}</p>` +
+    (S.isAdmin ? `<button class="btn" onclick="S.tab='setup';renderShell();render()">Open Setup</button>` : "");
+}
+
+// ── Filters ─────────────────────────────────────────────────
+function filtersHtml(showDept, showForwarded) {
+  const F = S.filters;
+  return `<div class="card filters row no-print">
+    <label style="width:140px"><span>Academic year</span><select data-filter="year">${opts(C.academicYears, F.year, true)}</select></label>
+    <label style="width:130px"><span>Semester</span><select data-filter="semester">${opts(C.semesters, F.semester, true)}</select></label>
+    ${showDept ? `<label style="width:170px"><span>Department</span><select data-filter="department">${opts(C.departments, F.department, true)}</select></label>` : ""}
+    ${showForwarded ? `<label style="display:flex;gap:6px;align-items:center;padding-bottom:8px;color:var(--text)"><input type="checkbox" data-filter="forwardedOnly" style="width:auto"${F.forwardedOnly ? " checked" : ""}> Only items forwarded by the Principal</label>` : ""}
+  </div>`;
+}
+function bindFilters(root) {
+  $$("[data-filter]", root).forEach(el => el.onchange = () => {
+    S.filters[el.dataset.filter] = el.type === "checkbox" ? el.checked : el.value;
+    render();
+  });
+}
+function applyFilters(list, { dept = true, forwarded = false } = {}) {
+  const F = S.filters;
+  return list.filter(r =>
+    (F.year === "All" || r.year === F.year) &&
+    (F.semester === "All" || r.semester === F.semester) &&
+    (!dept || F.department === "All" || r.department === F.department) &&
+    (!forwarded || !F.forwardedOnly || reviewOf(r.id).forward));
+}
+const periodLabel = () => [S.filters.year === "All" ? "All years" : S.filters.year, S.filters.semester === "All" ? "Fall & Spring" : S.filters.semester + " semester"].join(" · ");
+
+// ── HoD: my requests ────────────────────────────────────────
+function viewMine() {
+  const mine = applyFilters(S.requests, { dept: false });
+  const drafts = mine.filter(r => r.status === "Draft");
+  const total = mine.reduce((s, r) => s + r.total, 0);
+  const submitted = mine.filter(r => r.status === "Submitted").reduce((s, r) => s + r.total, 0);
+  return `<h1>My purchase requests</h1>
+  <p class="lede">Only you, the Principal and the Chairman can see these. Other HoDs cannot.</p>
+  ${filtersHtml(false, false)}
+  <div class="stats">
+    <div class="stat"><div class="k">Items</div><div class="v">${mine.length}</div></div>
+    <div class="stat"><div class="k">Submitted to Principal</div><div class="v">${money(submitted)}</div></div>
+    <div class="stat"><div class="k">Drafts (not yet sent)</div><div class="v">${money(total - submitted)}</div></div>
+  </div>
+  ${mine.length ? `<div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th>Category</th><th>Semester</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+    <tbody>${mine.map(r => `<tr>
+      <td><strong>${esc(r.item)}</strong><div class="small muted reason">${esc(r.reason)}</div>
+        <div class="small">${[r.supplier && esc(r.supplier), link(r.supplierLink, "supplier link"), link(r.quote, "quote")].filter(Boolean).join(" · ")}</div></td>
+      <td>${esc(r.category)}</td><td>${esc(r.semester)} ${esc(r.year)}</td>
+      <td class="num">${r.qty}</td><td class="num">${money(r.unit)}</td><td class="num"><strong>${money(r.total)}</strong></td>
+      <td>${priorityBadge(r.priority)}</td>
+      <td>${r.status === "Submitted" ? `<span class="badge ok">Submitted</span>` : `<span class="badge warn">Draft</span>`}</td>
+      <td style="white-space:nowrap">
+        <button class="btn small" data-edit="${r.id}">Edit</button>
+        ${r.status === "Draft" ? `<button class="btn small" data-submit="${r.id}">Submit</button>` : ""}
+        <button class="btn small danger" data-del="${r.id}">Delete</button></td>
+    </tr>`).join("")}
+    <tr class="total"><td colspan="5">Total</td><td class="num">${money(total)}</td><td colspan="3"></td></tr>
+    </tbody></table></div>` : `<div class="card center muted">No requests for this period yet.</div>`}
+  <div class="row no-print">
+    <button class="btn primary" data-go="new">+ New request</button>
+    ${drafts.length ? `<button class="btn" id="submitAll">Submit all ${drafts.length} draft${drafts.length > 1 ? "s" : ""} to Principal</button>` : ""}
+    <button class="btn" id="exportMine">Download Excel</button>
+  </div>`;
+}
+function priorityBadge(p) {
+  const cls = { Essential: "bad", Important: "warn" }[p] || "";
+  return p ? `<span class="badge ${cls}">${esc(p)}</span>` : "";
+}
+
+// ── HoD: new / edit form ────────────────────────────────────
+let editing = null; // request being edited, or null for new
+function blankItem() { return { item: "", category: C.categories[0], qty: 1, unit: "", supplier: "", supplierLink: "", reason: "", priority: "Important", quote: "" }; }
+
+function itemCard(it, i, single) {
+  return `<div class="item-card" data-card>
+    ${single ? "" : `<button type="button" class="btn small danger remove" data-remove title="Remove this item">✕</button>`}
+    <div class="grid">
+      <label class="wide"><span>Item *</span><input name="item" required value="${esc(it.item)}" placeholder="e.g. Basketballs (size 7)"></label>
+      <label><span>Category</span><select name="category">${opts(C.categories, it.category)}</select></label>
+      <label><span>Quantity *</span><input name="qty" type="number" min="1" step="1" required value="${esc(it.qty)}"></label>
+      <label><span>Unit price (¥) *</span><input name="unit" type="number" min="0" step="0.01" required value="${esc(it.unit)}"></label>
+      <div class="line-total" data-linetotal>${money((Number(it.qty) || 0) * (Number(it.unit) || 0))}</div>
+      <label><span>Priority</span><select name="priority">${opts(C.priorities, it.priority)}</select></label>
+      <label><span>Supplier</span><input name="supplier" value="${esc(it.supplier)}" placeholder="Shop or company"></label>
+      <label><span>Supplier / product link</span><input name="supplierLink" type="url" value="${esc(it.supplierLink)}" placeholder="https://…"></label>
+      <label><span>Quote or receipt link</span><input name="quote" type="url" value="${esc(it.quote)}" placeholder="OneDrive share link"></label>
+      <label class="wide"><span>Reason (why is this needed?) *</span><textarea name="reason" required>${esc(it.reason)}</textarea></label>
+    </div></div>`;
+}
+
+function viewForm() {
+  const e = editing;
+  const dept = lockedDept() || (e && e.department) || S.lastDept || C.departments[0];
+  return `<h1>${e ? "Edit request" : "New purchase request"}</h1>
+  <p class="lede">${e ? "Changes are saved straight to the list." : "Add one card per item. Save as a draft to finish later, or submit to send it to the Principal."}</p>
+  <form id="reqForm" autocomplete="off">
+    <div class="card"><div class="grid">
+      <label><span>Department</span><select name="department"${lockedDept() ? " disabled" : ""}>${opts(C.departments, dept)}</select></label>
+      <label><span>Academic year</span><select name="year">${opts(C.academicYears, (e && e.year) || (S.filters.year !== "All" ? S.filters.year : C.academicYears[0]))}</select></label>
+      <label><span>Semester</span><select name="semester">${opts(C.semesters, (e && e.semester) || (S.filters.semester !== "All" ? S.filters.semester : C.semesters[0]))}</select></label>
+    </div></div>
+    <div id="cards">${e ? itemCard(e, 0, true) : itemCard(blankItem(), 0, false)}</div>
+    ${e ? "" : `<button type="button" class="btn no-print" id="addItem">+ Add another item</button>`}
+    <div class="sticky-actions">
+      <strong id="formTotal"></strong>
+      <span style="flex:1"></span>
+      ${e ? `<button type="button" class="btn" id="cancelEdit">Cancel</button>` : ""}
+      <button type="submit" class="btn" data-status="Draft">${e && e.status === "Submitted" ? "Move back to draft" : "Save as draft"}</button>
+      <button type="submit" class="btn primary" data-status="Submitted">${e && e.status === "Submitted" ? "Save changes" : "Submit to Principal"}</button>
+    </div>
+  </form>`;
+}
+
+function bindForm(root) {
+  const form = $("#reqForm", root);
+  const recalc = () => {
+    let sum = 0;
+    $$("[data-card]", form).forEach(c => {
+      const t = (Number($("[name=qty]", c).value) || 0) * (Number($("[name=unit]", c).value) || 0);
+      $("[data-linetotal]", c).textContent = money(t); sum += t;
+    });
+    $("#formTotal").textContent = "Total: " + money(sum);
+    $$("[data-remove]", form).forEach(b => b.style.display = $$("[data-card]", form).length > 1 ? "" : "none");
+  };
+  form.addEventListener("input", recalc);
+  form.addEventListener("click", ev => {
+    if (ev.target.matches("[data-remove]")) { ev.target.closest("[data-card]").remove(); recalc(); }
+  });
+  const add = $("#addItem", form);
+  if (add) add.onclick = () => { $("#cards").insertAdjacentHTML("beforeend", itemCard(blankItem(), 0, false)); recalc(); $$("[data-card] [name=item]").pop().focus(); };
+  const cancel = $("#cancelEdit", form);
+  if (cancel) cancel.onclick = () => { editing = null; S.tab = "mine"; renderShell(); render(); };
+  let status = "Submitted";
+  $$("button[type=submit]", form).forEach(b => b.onclick = () => { status = b.dataset.status; });
+  form.onsubmit = async ev => {
+    ev.preventDefault();
+    if (!form.reportValidity()) return;
+    const head = {
+      department: lockedDept() || form.department.value, year: form.year.value, semester: form.semester.value, status,
+    };
+    S.lastDept = head.department;
+    const items = $$("[data-card]", form).map(c => ({
+      item: $("[name=item]", c).value.trim(), category: $("[name=category]", c).value,
+      qty: Number($("[name=qty]", c).value) || 0, unit: Number($("[name=unit]", c).value) || 0,
+      priority: $("[name=priority]", c).value, supplier: $("[name=supplier]", c).value.trim(),
+      supplierLink: $("[name=supplierLink]", c).value.trim(), quote: $("[name=quote]", c).value.trim(),
+      reason: $("[name=reason]", c).value.trim(), ...head,
+    }));
+    $$("button", form).forEach(b => b.disabled = true);
+    try {
+      if (editing) {
+        const f = requestFields(items[0]);
+        if (status === "Submitted" && editing.status !== "Submitted") f.SubmittedAt = nowIso();
+        if (status === "Draft") f.SubmittedAt = null;
+        await updateRequest(editing.id, f);
+      } else {
+        for (const it of items) await createRequest(it);
+      }
+      const n = items.length;
+      const msg = editing ? "Request updated." :
+        `${n} item${n > 1 ? "s" : ""} ${status === "Submitted" ? "submitted to the Principal" : "saved as draft"}.`;
+      editing = null; S.tab = "mine";
+      await refresh({ type: "ok", text: msg });
+    } catch (e) {
+      $$("button", form).forEach(b => b.disabled = false);
+      form.insertAdjacentHTML("afterbegin", `<div class="notice error">Could not save: ${esc(e.message)}</div>`);
+      window.scrollTo(0, 0);
+    }
+  };
+  recalc();
+}
+
+function bindMine(root) {
+  bindFilters(root);
+  $$("[data-go]", root).forEach(b => b.onclick = () => { editing = null; S.tab = b.dataset.go; renderShell(); render(); });
+  $$("[data-edit]", root).forEach(b => b.onclick = () => { editing = S.requests.find(r => r.id === b.dataset.edit); S.tab = "new"; renderShell(); render(); });
+  $$("[data-submit]", root).forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await updateRequest(b.dataset.submit, { RequestStatus: "Submitted", SubmittedAt: nowIso() }); await refresh({ type: "ok", text: "Submitted to the Principal." }); }
+    catch (e) { alert("Could not submit: " + e.message); b.disabled = false; }
+  });
+  $$("[data-del]", root).forEach(b => b.onclick = async () => {
+    const r = S.requests.find(x => x.id === b.dataset.del);
+    if (!confirm(`Delete “${r.item}”? This cannot be undone.`)) return;
+    b.disabled = true;
+    try { await deleteRequest(r.id); await refresh({ type: "ok", text: "Request deleted." }); }
+    catch (e) { alert("Could not delete: " + e.message); b.disabled = false; }
+  });
+  const sa = $("#submitAll", root);
+  if (sa) sa.onclick = async () => {
+    const drafts = applyFilters(S.requests, { dept: false }).filter(r => r.status === "Draft");
+    if (!confirm(`Submit ${drafts.length} draft item(s) to the Principal?`)) return;
+    sa.disabled = true;
+    try { for (const d of drafts) await updateRequest(d.id, { RequestStatus: "Submitted", SubmittedAt: nowIso() }); await refresh({ type: "ok", text: `${drafts.length} item(s) submitted.` }); }
+    catch (e) { alert("Could not submit: " + e.message); sa.disabled = false; }
+  };
+  $("#exportMine", root).onclick = () => exportExcel(applyFilters(S.requests, { dept: false }), false);
+}
+
+// ── Principal: review ───────────────────────────────────────
+const submitted = () => S.requests.filter(r => r.status === "Submitted");
+
+function viewReview() {
+  const readOnly = role() !== "principal";
+  if (!S.revListId) return `<div class="notice warn">The “${esc(C.reviewsList)}” list was not found, so comments can’t be saved. Run Setup first.</div>`;
+  const list = applyFilters(submitted());
+  const total = list.reduce((s, r) => s + r.total, 0);
+  const fwd = list.filter(r => reviewOf(r.id).forward);
+  const noRec = list.filter(r => !reviewOf(r.id).rec).length;
+  const groups = C.departments.map(d => [d, list.filter(r => r.department === d)]).filter(g => g[1].length);
+  return `<h1>${readOnly ? "All submitted requests" : "Review requests"}</h1>
+  <p class="lede">${readOnly ? "Everything HoDs have submitted, with the Principal’s comments." :
+    "Add a recommendation and comment to each item, then tick “Forward” to include it in the Chairman’s report. Changes save automatically."}</p>
+  ${filtersHtml(true, false)}
+  <div class="stats">
+    <div class="stat"><div class="k">Submitted items</div><div class="v">${list.length}</div></div>
+    <div class="stat"><div class="k">Total requested</div><div class="v">${money(total)}</div></div>
+    <div class="stat"><div class="k">Forwarded to Chairman</div><div class="v">${money(fwd.reduce((s, r) => s + r.total, 0))}</div></div>
+    <div class="stat"><div class="k">Still to review</div><div class="v">${noRec}</div></div>
+  </div>
+  ${groups.length ? `<div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th class="num">Qty × unit</th><th class="num">Total</th><th>Priority</th><th style="min-width:260px">Principal</th><th>Forward</th></tr></thead>
+    <tbody>${groups.map(([d, rows]) => `
+      <tr class="group"><td colspan="2">${esc(d)} <span class="small muted">· ${rows.length} item${rows.length > 1 ? "s" : ""}</span></td>
+        <td class="num">${money(rows.reduce((s, r) => s + r.total, 0))}</td><td colspan="2"></td>
+        <td>${readOnly ? "" : `<button class="btn small" data-fwdall="${esc(d)}">Forward all</button>`}</td></tr>
+      ${rows.map(r => reviewRow(r, readOnly)).join("")}`).join("")}
+    </tbody></table></div>` : `<div class="card center muted">No submitted requests for this period.</div>`}
+  <div class="row no-print"><button class="btn" id="exportAll">Download Excel</button></div>`;
+}
+
+function reviewRow(r, readOnly) {
+  const v = reviewOf(r.id);
+  return `<tr data-rid="${r.id}">
+    <td><strong>${esc(r.item)}</strong> <span class="badge">${esc(r.category)}</span>
+      ${editedAfterDecision(r) ? `<span class="badge warn" title="The HoD changed this after the Chairman decided">Edited after decision</span>` : ""}
+      <div class="small muted reason">${esc(r.reason)}</div>
+      <div class="small muted">${esc(r.author)} · ${esc(r.semester)} ${esc(r.year)}${r.supplier ? " · " + esc(r.supplier) : ""}
+        ${[link(r.supplierLink, "supplier"), link(r.quote, "quote")].filter(Boolean).map(x => " · " + x).join("")}</div></td>
+    <td class="num">${r.qty} × ${money(r.unit)}</td>
+    <td class="num"><strong>${money(r.total)}</strong></td>
+    <td>${priorityBadge(r.priority)}</td>
+    <td>${readOnly ? `${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : `<span class="muted small">No comment yet</span>`}<div class="small reason">${esc(v.comment)}</div>` : `
+      <select data-f="PrincipalRecommendation"><option value="">— Recommendation —</option>${opts(C.recommendations, v.rec)}</select>
+      <textarea data-f="PrincipalComment" placeholder="Comment for the Chairman" style="margin-top:6px;min-height:44px">${esc(v.comment)}</textarea>
+      <div class="saving" data-saving></div>`}</td>
+    <td style="text-align:center">${readOnly ? (v.forward ? "✓" : "") : `<input type="checkbox" data-f="ForwardToChairman" style="width:18px;height:18px"${v.forward ? " checked" : ""}>`}</td>
+  </tr>`;
+}
+
+function bindAutosave(root) {
+  $$("[data-rid] [data-f]", root).forEach(el => {
+    const ev = el.tagName === "TEXTAREA" || el.type === "number" || el.type === "text" ? "change" : "input";
+    el.addEventListener(ev, () => saveField(el));
+  });
+}
+async function saveField(el, extra) {
+  const tr = el.closest("[data-rid]");
+  const id = tr.dataset.rid;
+  const note = $("[data-saving]", tr);
+  let val = el.type === "checkbox" ? el.checked : el.value;
+  if (el.type === "number") val = el.value === "" ? null : Number(el.value);
+  if (note) note.textContent = "Saving…";
+  try {
+    await saveReview(id, { [el.dataset.f]: val, ...(extra || {}) });
+    if (note) { note.textContent = "Saved ✓"; setTimeout(() => { if (note.textContent === "Saved ✓") note.textContent = ""; }, 2000); }
+  } catch (e) {
+    if (note) note.textContent = ""; alert("Could not save: " + e.message);
+  }
+}
+
+function bindReview(root) {
+  bindFilters(root);
+  bindAutosave(root);
+  $$("[data-fwdall]", root).forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const boxes = $$(`[data-rid]`, root).filter(tr => S.requests.find(r => r.id === tr.dataset.rid).department === b.dataset.fwdall)
+      .map(tr => $("[data-f=ForwardToChairman]", tr)).filter(cb => cb && !cb.checked);
+    for (const cb of boxes) { cb.checked = true; await saveField(cb); }
+    b.disabled = false;
+  });
+  const ex = $("#exportAll", root);
+  if (ex) ex.onclick = () => exportExcel(applyFilters(submitted()), true);
+}
+
+// ── Chairman report ─────────────────────────────────────────
+const isApproved = d => d === "Approved" || d === "Approved with changes";
+const approvedAmt = r => { const v = reviewOf(r.id); return isApproved(v.decision) ? (v.approved === "" || v.approved == null ? r.total : Number(v.approved) || 0) : 0; };
+
+function summarize(list) {
+  const rows = C.departments.map(d => {
+    const rs = list.filter(r => r.department === d);
+    return {
+      department: d, items: rs.length,
+      requested: rs.reduce((s, r) => s + r.total, 0),
+      recommended: rs.filter(r => /^Recommend/.test(reviewOf(r.id).rec)).reduce((s, r) => s + r.total, 0),
+      approved: rs.reduce((s, r) => s + approvedAmt(r), 0),
+      pending: rs.filter(r => reviewOf(r.id).decision === "Pending").length,
+      rejected: rs.filter(r => reviewOf(r.id).decision === "Rejected").length,
+    };
+  }).filter(r => r.items);
+  const tot = rows.reduce((t, r) => { for (const k of ["items", "requested", "recommended", "approved", "pending", "rejected"]) t[k] += r[k]; return t; },
+    { department: "Total", items: 0, requested: 0, recommended: 0, approved: 0, pending: 0, rejected: 0 });
+  return { rows, tot };
+}
+
+function viewReport() {
+  const canDecide = role() === "chairman";
+  if (!S.revListId) return `<div class="notice warn">The “${esc(C.reviewsList)}” list was not found. Run Setup first.</div>`;
+  const list = applyFilters(submitted(), { forwarded: true });
+  const { rows, tot } = summarize(list);
+  const cats = C.categories.map(c => [c, list.filter(r => r.category === c)]).filter(x => x[1].length);
+  const groups = C.departments.map(d => [d, list.filter(r => r.department === d)]).filter(g => g[1].length);
+  return `<div class="print-only"><h1>${esc(C.schoolName)} — Purchase Requests</h1><p>${esc(periodLabel())} · Printed ${fmtDate(new Date())}</p></div>
+  <div class="no-print"><h1>${canDecide ? "Report & decisions" : "Chairman report"}</h1>
+  <p class="lede">${canDecide ? "Requests the Principal has forwarded, with comments. Your decision saves automatically." :
+    "This is what the Chairman sees. Only the Chairman can record decisions here."}</p></div>
+  ${filtersHtml(true, true)}
+  <div class="stats">
+    <div class="stat"><div class="k">Requested</div><div class="v">${money(tot.requested)}</div></div>
+    <div class="stat"><div class="k">Recommended by Principal</div><div class="v">${money(tot.recommended)}</div></div>
+    <div class="stat"><div class="k">Approved</div><div class="v">${money(tot.approved)}</div></div>
+    <div class="stat"><div class="k">Awaiting decision</div><div class="v">${tot.pending} item${tot.pending === 1 ? "" : "s"}</div></div>
+  </div>
+  <h2>Summary by department</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Department</th><th class="num">Items</th><th class="num">Requested</th><th class="num">Recommended</th><th class="num">Approved</th><th class="num">Pending</th><th class="num">Rejected</th></tr></thead>
+    <tbody>${rows.concat(rows.length ? [tot] : []).map(r => `<tr${r === tot ? ' class="total"' : ""}>
+      <td>${esc(r.department)}</td><td class="num">${r.items}</td><td class="num">${money(r.requested)}</td>
+      <td class="num">${money(r.recommended)}</td><td class="num">${money(r.approved)}</td><td class="num">${r.pending}</td><td class="num">${r.rejected}</td></tr>`).join("") ||
+      `<tr><td colspan="7" class="muted center">Nothing to show yet.</td></tr>`}</tbody></table></div>
+  ${cats.length ? `<h2>By category</h2><div class="table-wrap"><table>
+    <thead><tr><th>Category</th><th class="num">Items</th><th class="num">Requested</th><th class="num">Approved</th></tr></thead>
+    <tbody>${cats.map(([c, rs]) => `<tr><td>${esc(c)}</td><td class="num">${rs.length}</td><td class="num">${money(rs.reduce((s, r) => s + r.total, 0))}</td><td class="num">${money(rs.reduce((s, r) => s + approvedAmt(r), 0))}</td></tr>`).join("")}</tbody></table></div>` : ""}
+  ${groups.length ? `<h2>Items</h2><div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th class="num">Requested</th><th>Principal</th><th style="min-width:200px">Decision</th><th class="num" style="min-width:110px">Approved ¥</th><th style="min-width:160px">Note</th></tr></thead>
+    <tbody>${groups.map(([d, rs]) => `<tr class="group"><td>${esc(d)}</td><td class="num">${money(rs.reduce((s, r) => s + r.total, 0))}</td><td></td><td></td><td class="num">${money(rs.reduce((s, r) => s + approvedAmt(r), 0))}</td><td></td></tr>
+      ${rs.map(r => decisionRow(r, canDecide)).join("")}`).join("")}</tbody></table></div>` : ""}
+  <div class="row no-print">
+    <button class="btn primary" onclick="window.print()">Print / save as PDF</button>
+    <button class="btn" id="exportReport">Download Excel</button>
+  </div>`;
+}
+
+function decisionRow(r, canDecide) {
+  const v = reviewOf(r.id);
+  const cls = { Approved: "ok", "Approved with changes": "ok", Rejected: "bad", Deferred: "warn" }[v.decision] || "";
+  return `<tr data-rid="${r.id}">
+    <td><strong>${esc(r.item)}</strong> ${priorityBadge(r.priority)}
+      ${editedAfterDecision(r) ? `<span class="badge warn">Edited after decision</span>` : ""}
+      <div class="small muted">${esc(r.category)} · ${r.qty} × ${money(r.unit)} · ${esc(r.semester)} ${esc(r.year)}${r.supplier ? " · " + esc(r.supplier) : ""}${link(r.quote, "quote") ? " · " + link(r.quote, "quote") : ""}</div>
+      <div class="small reason">${esc(r.reason)}</div></td>
+    <td class="num"><strong>${money(r.total)}</strong></td>
+    <td>${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : ""}<div class="small reason">${esc(v.comment)}</div></td>
+    <td>${canDecide ? `<select data-f="ChairmanDecision">${opts(C.decisions, v.decision)}</select><div class="saving" data-saving></div>`
+      : `<span class="badge ${cls}">${esc(v.decision)}</span>`}</td>
+    <td class="num">${canDecide ? `<input type="number" min="0" step="0.01" data-f="ApprovedAmount" value="${isApproved(v.decision) ? esc(v.approved === "" || v.approved == null ? r.total : v.approved) : ""}"${isApproved(v.decision) ? "" : " disabled"}>`
+      : (isApproved(v.decision) ? money(approvedAmt(r)) : "")}</td>
+    <td>${canDecide ? `<textarea data-f="ChairmanNote" style="min-height:38px">${esc(v.note)}</textarea>` : `<span class="small">${esc(v.note)}</span>`}</td>
+  </tr>`;
+}
+
+function bindReport(root) {
+  bindFilters(root);
+  $$("[data-rid] [data-f]", root).forEach(el => {
+    if (el.dataset.f === "ChairmanDecision") {
+      el.addEventListener("change", async () => {
+        const r = S.requests.find(x => x.id === el.closest("[data-rid]").dataset.rid);
+        const d = el.value, decided = d !== "Pending", prev = reviewOf(r.id);
+        const keep = isApproved(prev.decision) && prev.approved !== "" && prev.approved != null;
+        await saveField(el, {
+          ApprovedAmount: isApproved(d) ? (keep ? Number(prev.approved) : r.total) : (d === "Rejected" ? 0 : null),
+          DecidedAt: decided ? new Date().toISOString() : null,
+          DecidedRequestVersion: decided ? r.modified : "",
+        });
+        render(); // refresh totals and the approved-amount box
+      });
+    } else {
+      el.addEventListener("change", async () => { await saveField(el); if (el.dataset.f === "ApprovedAmount") render(); });
+    }
+  });
+  $("#exportReport", root).onclick = () => exportExcel(applyFilters(submitted(), { forwarded: true }), true);
+}
+
+// ── Excel export ────────────────────────────────────────────
+function exportExcel(list, withReview) {
+  const wb = XLSX.utils.book_new();
+  if (withReview) {
+    const { rows, tot } = summarize(list);
+    const sum = [["Purchase Requests — " + periodLabel()], [],
+      ["Department", "Items", "Requested (¥)", "Recommended (¥)", "Approved (¥)", "Pending", "Rejected"],
+      ...rows.concat([tot]).map(r => [r.department, r.items, r.requested, r.recommended, r.approved, r.pending, r.rejected])];
+    const ws = XLSX.utils.aoa_to_sheet(sum);
+    ws["!cols"] = [{ wch: 18 }, { wch: 8 }, { wch: 15 }, { wch: 16 }, { wch: 14 }, { wch: 9 }, { wch: 9 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Summary");
+  }
+  const items = list.map(r => {
+    const base = {
+      Department: r.department, "Academic year": r.year, Semester: r.semester, Item: r.item, Category: r.category,
+      Quantity: r.qty, "Unit price (¥)": r.unit, "Total (¥)": r.total, Priority: r.priority, Reason: r.reason,
+      Supplier: r.supplier, "Supplier link": r.supplierLink, "Quote link": r.quote, "Requested by": r.author,
+      Status: r.status, Submitted: fmtDate(r.created),
+    };
+    if (!withReview) return base;
+    const v = reviewOf(r.id);
+    return { ...base, "Principal recommendation": v.rec, "Principal comment": v.comment, "Forwarded": v.forward ? "Yes" : "No",
+      "Chairman decision": v.decision, "Approved (¥)": isApproved(v.decision) ? approvedAmt(r) : "", "Chairman note": v.note };
+  });
+  const ws2 = XLSX.utils.json_to_sheet(items);
+  XLSX.utils.book_append_sheet(wb, ws2, "Items");
+  const name = ["Purchase_Requests", S.filters.year, S.filters.semester, S.filters.department].filter(x => x && x !== "All").join("_");
+  XLSX.writeFile(wb, name.replace(/\s+/g, "") + ".xlsx");
+}
+
+// ── Setup (admins) ──────────────────────────────────────────
+const choice = (name, choices) => ({ name, choice: { choices, displayAs: "dropDownMenu" } });
+const REQUEST_COLUMNS = () => [
+  choice("Department", C.departments), { name: "AcademicYear", text: {} }, choice("Semester", C.semesters),
+  choice("Category", C.categories), { name: "Quantity", number: {} }, { name: "UnitPrice", number: {} },
+  { name: "LineTotal", number: {} }, { name: "Supplier", text: {} }, { name: "SupplierLink", text: {} },
+  { name: "Reason", text: { allowMultipleLines: true } }, choice("Priority", C.priorities), { name: "QuoteLink", text: {} },
+  choice("RequestStatus", ["Draft", "Submitted"]), { name: "SubmittedAt", dateTime: { format: "dateTime" } },
+];
+const REVIEW_COLUMNS = () => [
+  { name: "RequestId", number: {} }, choice("PrincipalRecommendation", C.recommendations),
+  { name: "PrincipalComment", text: { allowMultipleLines: true } }, { name: "ForwardToChairman", boolean: {} },
+  { ...choice("ChairmanDecision", C.decisions), defaultValue: { value: "Pending" } }, { name: "ApprovedAmount", number: {} },
+  { name: "ChairmanNote", text: { allowMultipleLines: true } }, { name: "DecidedAt", dateTime: { format: "dateTime" } },
+  { name: "DecidedRequestVersion", text: {} },
+];
+
+function viewSetup() {
+  const listLinks = id => S.siteUrl && id ? {
+    perms: `${S.siteUrl}/_layouts/15/user.aspx?obj=%7B${id}%7D,list&List=%7B${id}%7D`,
+    adv: `${S.siteUrl}/_layouts/15/advsetng.aspx?List=%7B${id}%7D`,
+  } : null;
+  const a = listLinks(S.reqListId), b = listLinks(S.revListId);
+  const peopleOk = C.principals.length && C.chairmen.length;
+  return `<h1>Setup</h1><p class="lede">Only admins listed in <code>config.js</code> see this tab.</p>
+  <div class="card">
+    <h2 style="margin-top:0">1. Status</h2>
+    <table><tbody>
+      <tr><td>SharePoint site</td><td>${S.siteId ? `<span class="badge ok">Found</span> ${link(S.siteUrl, S.siteUrl)}` : `<span class="badge bad">Not found</span> <code>${esc(C.siteHostname + C.sitePath)}</code>`}</td></tr>
+      <tr><td>${esc(C.requestsList)}</td><td>${S.reqListId ? `<span class="badge ok">Ready</span> ${link(S.reqListUrl, "open list")}` : `<span class="badge warn">Not created</span>`}</td></tr>
+      <tr><td>${esc(C.reviewsList)}</td><td>${S.revListId ? `<span class="badge ok">Ready</span> ${link(S.revListUrl, "open list")}` : `<span class="badge warn">Not created</span>`}</td></tr>
+      <tr><td>Principal / Chairman emails</td><td>${peopleOk ? `<span class="badge ok">Set</span> ${esc(C.principals.join(", "))} / ${esc(C.chairmen.join(", "))}` : `<span class="badge warn">Add them to config.js</span>`}</td></tr>
+    </tbody></table>
+    ${S.siteId && (!S.reqListId || !S.revListId) ? `<p><button class="btn primary" id="createLists">Create the missing lists</button> <span class="small muted">You’ll be asked to approve one extra permission (manage lists).</span></p>` : ""}
+    ${S.siteId && S.reqListId ? `<p class="small muted">Optional, for faster loading — put these in config.js:<br><code>siteId: "${esc(S.siteId)}"</code><br><code>requestsListId: "${esc(S.reqListId)}"</code></p>` : ""}
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">2. Lock down privacy (do this once, in SharePoint)</h2>
+    <ol class="steps">
+      <li><strong>${esc(C.requestsList)} → Advanced settings</strong>${a ? ` (${link(a.adv, "open")})` : ""}: set <em>Read access</em> to <strong>Read items that were created by the user</strong> and <em>Create and Edit access</em> to <strong>Create items and edit items that were created by the user</strong>. Save.</li>
+      <li><strong>${esc(C.requestsList)} → Permissions</strong>${a ? ` (${link(a.perms, "open")})` : ""}: <em>Stop Inheriting Permissions</em>. Remove the Members and Visitors groups. Grant each HoD (or a “HoDs” group) <strong>Contribute</strong>. Grant the Principal and Chairman <strong>Full Control</strong> (or Design).</li>
+      <li><strong>${esc(C.reviewsList)} → Permissions</strong>${b ? ` (${link(b.perms, "open")})` : ""}: <em>Stop Inheriting Permissions</em>. Remove everyone except the Principal and Chairman (<strong>Full Control</strong>). HoDs must <strong>not</strong> have access.</li>
+      <li>Test it: ask two HoDs to add one item each. Each should see only their own item. The Principal should see both.</li>
+    </ol>
+  </div>`;
+}
+
+function bindSetup(root) {
+  const b = $("#createLists", root);
+  if (!b) return;
+  b.onclick = async () => {
+    b.disabled = true; b.textContent = "Creating…";
+    try {
+      await token(SETUP_SCOPES);
+      const mk = (displayName, columns) => graph("POST", `/sites/${S.siteId}/lists`, { displayName, columns, list: { template: "genericList" } }, SETUP_SCOPES);
+      if (!S.reqListId) await mk(C.requestsList, REQUEST_COLUMNS());
+      if (!S.revListId) await mk(C.reviewsList, REVIEW_COLUMNS());
+      S.reqListId = ""; S.revListId = "";
+      await resolveSite();
+      S.flash = { type: "ok", text: "Lists created. Now finish step 2 below." };
+    } catch (e) {
+      S.flash = { type: "error", text: "Could not create lists: " + e.message };
+    }
+    render();
+  };
+}
+
+const BIND = { mine: bindMine, new: bindForm, review: bindReview, report: bindReport, setup: bindSetup };
+
+// ── Start ───────────────────────────────────────────────────
+function signInScreen(extra) {
+  $("#main").innerHTML = `<div class="center">
+    <h1>WZFS Purchase Requests</h1>
+    <p class="lede">HoDs submit purchase requests. The Principal reviews them and the Chairman decides.</p>
+    ${extra || ""}
+    <button class="btn primary" id="signIn">Sign in with your school Microsoft account</button></div>`;
+  $("#signIn").onclick = () => pca.loginRedirect({ scopes: SCOPES, prompt: "select_account" });
+}
+
+(async function start() {
+  $("#schoolName").textContent = C.schoolName;
+  if (!C.clientId || C.clientId.startsWith("PASTE")) {
+    $("#main").innerHTML = `<div class="notice warn">Setup needed: add the app’s <code>clientId</code> to <code>config.js</code> (see README, step 2).</div>`;
+    return;
+  }
+  try { await initAuth(); }
+  catch (e) { $("#main").innerHTML = `<div class="notice error">Sign-in problem: ${esc(e.message)}</div>`; return; }
+  if (!S.account) { signInScreen(); return; }
+  S.email = lc(S.account.username);
+  S.name = S.account.name || S.email;
+  detectRole();
+  if (S.isAdmin && S.role === "hod" && !C.principals.length) S.tab = "setup";
+  await refresh();
+})();
+</script>
+</body>
+</html>
