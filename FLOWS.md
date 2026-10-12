@@ -1,123 +1,121 @@
 # Power Automate flows
 
-The website is where people work. These two flows send the notifications:
-
 | Flow | When | To | What |
 |---|---|---|---|
-| 1. Daily digest | Weekdays 15:30 Beijing | Principal (asumeg-ang@) | Items submitted since the last digest, as a table with the total |
+| 1. Daily digest | Weekdays 15:30 Beijing | Principal (asumeg-ang@) | New requests submitted since the last digest, as a table with the total |
 | 2. Chairman reminder | Mondays 08:00 Beijing | Chairman (mlee@) | Forwarded items still **Pending**, as a table with the total |
 
-**Why a digest and not an email per item?** A HoD submitting 12 items would otherwise send the Principal 12 emails.
+Each flow has only 5 steps. Build them while signed in as **glenj@** (a site owner, so the flows can read every item).
 
-**Before you start:** the SharePoint site and both lists must exist (README steps 1–4). The person who builds the flows needs **Full Control** on both lists, because the flows run as that person. Use the Principal's account or yours (as site owner).
+**Site Address** in every SharePoint step: `https://weihaizhongshi.sharepoint.com/sites/PurchaseRequests`
 
-Every SharePoint step below uses:
-- **Site Address:** `https://weihaizhongshi.sharepoint.com/sites/PurchaseRequests`
+> **How to enter an expression:** click in the box → click the **fx** button (or type `/` and choose **Insert expression**) → paste the expression → **Add**.
 
 ---
 
 ## Flow 1: Daily digest to the Principal
 
-**Create → Scheduled cloud flow.** Name: `Purchase Requests – daily digest`
+**Create → Scheduled cloud flow**
+- Name: `Purchase Requests - daily digest`
+- Repeat every **1 Week**
+- Click **Create**
 
-1. **Recurrence**
-   - Interval `1`, Frequency **Week**
-   - Time zone **(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi**
-   - On these days: **Mon Tue Wed Thu Fri**. At these hours: `15`. At these minutes: `30`.
+**1. Recurrence** (click the trigger, then **Show all / Advanced parameters**)
+- Time zone: **(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi**
+- On these days: **Monday … Friday**
+- At these hours: `15`. At these minutes: `30`
 
-2. **Initialize variable**: Name `Since`, Type **String**, Value (expression). On Mondays it looks back over the weekend:
-   ```
-   formatDateTime(if(equals(dayOfWeek(utcNow()),1), addDays(utcNow(),-3), addDays(utcNow(),-1)), 'yyyy-MM-ddTHH:mm:ssZ')
-   ```
+**2. + → SharePoint → Get items**
+- Site Address: the address above. List Name: **Purchase Requests**
+- **Filter Query:** type `RequestStatus eq 'Submitted' and SubmittedAt ge '` then insert this **expression**, then type a closing `'`:
+  ```
+  addDays(utcNow(), if(equals(dayOfWeek(utcNow()),1), -3, -1))
+  ```
+- Order By: `Department`
+- Top Count: `500`
 
-3. **Initialize variable**: Name `Total`, Type **Float**, Value `0`
+**3. + → Control → Condition**
+- Left (expression): `length(outputs('Get_items')?['body/value'])`
+- Operator: **is greater than**. Right: `0`
 
-4. **SharePoint → Get items**
-   - List Name: **Purchase Requests**
-   - Filter Query: `RequestStatus eq 'Submitted' and SubmittedAt ge '@{variables('Since')}'`
-   - Order By: `Department`
-   - Top Count: `500`
+**4. In True: + → Data Operation → Create HTML table**
+- From: **value** (dynamic content from *Get items*)
+- Columns: **Custom**. Add these rows (header, then value as an **expression**):
 
-5. **Condition**: expression `length(outputs('Get_items')?['body/value'])` **is greater than** `0`
-   **If no:** leave empty (no email on quiet days).
-   **If yes:** add steps 6–9.
+| Header | Value (expression) |
+|---|---|
+| Department | `item()?['Department']?['Value']` |
+| Item | `item()?['Title']` |
+| Qty | `item()?['Quantity']` |
+| Total ¥ | `formatNumber(item()?['LineTotal'],'N0')` |
+| Priority | `item()?['Priority']?['Value']` |
+| Reason | `item()?['Reason']` |
+| From | `item()?['Author']?['DisplayName']` |
 
-6. **Apply to each** over `value` (from Get items) → **Increment variable** `Total` by expression `items('Apply_to_each')?['LineTotal']`
+**5. In True: + → Office 365 Outlook → Send an email (V2)**
+- To: `asumeg-ang@zhongshischool.org`
+- Subject: `New purchase requests to review`
+- Body: click **</>** (code view) and paste:
+  ```html
+  <p>Dear Mr Sumeg-ang,</p>
+  <p>These purchase requests were submitted since the last digest:</p>
+  @{body('Create_HTML_table')}
+  <p><a href="https://wzfs-ict.github.io/purchase-requests/">Open Purchase Requests to review</a></p>
+  ```
 
-7. **Data Operation → Select**. From: `value` (Get items). Map (switch to text mode, key → expression):
-   | Key | Value (expression) |
-   |---|---|
-   | Department | `item()?['Department']?['Value']` |
-   | Item | `item()?['Title']` |
-   | Qty | `item()?['Quantity']` |
-   | Total (¥) | `formatNumber(item()?['LineTotal'], 'N0')` |
-   | Priority | `item()?['Priority']?['Value']` |
-   | Reason | `item()?['Reason']` |
-   | Requested by | `item()?['Author']?['DisplayName']` |
-
-8. **Data Operation → Create HTML table**. From: output of **Select**. Columns: Automatic.
-
-9. **Office 365 Outlook → Send an email (V2)**
-   - To: `asumeg-ang@zhongshischool.org`
-   - Subject: `New purchase requests: @{length(outputs('Get_items')?['body/value'])} item(s), ¥@{formatNumber(variables('Total'),'N0')}`
-   - Body (use the `</>` code view):
-     ```html
-     <p>The following purchase requests were submitted since the last digest.</p>
-     @{body('Create_HTML_table')}
-     <p><b>Total: ¥@{formatNumber(variables('Total'),'N0')}</b></p>
-     <p><a href="https://wzfs-ict.github.io/purchase-requests/">Open Purchase Requests to review</a></p>
-     ```
-
----
-
-## Flow 2: Weekly reminder to the Chairman
-
-**Create → Scheduled cloud flow.** Name: `Purchase Requests – Chairman reminder`
-
-1. **Recurrence**: Interval `1`, Frequency **Week**, time zone Beijing, On these days **Monday**, hours `8`, minutes `0`.
-
-2. **Initialize variable**: `Total`, **Float**, `0`
-3. **Initialize variable**: `Rows`, **Array**, `[]`
-
-4. **SharePoint → Get items**
-   - List Name: **Purchase Reviews**
-   - Filter Query: `ForwardToChairman eq 1 and ChairmanDecision eq 'Pending'`
-   - Top Count: `500`
-
-5. **Condition**: `length(outputs('Get_items')?['body/value'])` **is greater than** `0`. **If yes:**
-
-6. **Apply to each** over `value` (from Get items):
-   1. **SharePoint → Get item**. List Name **Purchase Requests**, Id (expression): `int(items('Apply_to_each')?['RequestId'])`
-   2. **Increment variable** `Total` by `outputs('Get_item')?['body/LineTotal']`
-   3. **Append to array variable** `Rows`, Value:
-      ```json
-      {
-        "Department": "@{outputs('Get_item')?['body/Department/Value']}",
-        "Item": "@{outputs('Get_item')?['body/Title']}",
-        "Total (¥)": "@{formatNumber(outputs('Get_item')?['body/LineTotal'],'N0')}",
-        "Principal": "@{items('Apply_to_each')?['PrincipalRecommendation']?['Value']}",
-        "Comment": "@{items('Apply_to_each')?['PrincipalComment']}"
-      }
-      ```
-   > If a HoD deletes a request after it was forwarded, **Get item** fails for that row, and the loop skips it. To make sure the email still goes out, open ⋯ → **Settings / Configure run after** on step 7 (**Create HTML table**) and tick both **is successful** and **has failed**.
-
-7. **Create HTML table**: From `variables('Rows')`
-
-8. **Send an email (V2)**
-   - To: `mlee@zhongshischool.org`
-   - Subject: `Purchase requests awaiting your decision: @{length(variables('Rows'))} item(s), ¥@{formatNumber(variables('Total'),'N0')}`
-   - Body:
-     ```html
-     <p>Good morning. These requests have been reviewed by the Principal and are waiting for your decision.</p>
-     @{body('Create_HTML_table')}
-     <p><b>Total awaiting decision: ¥@{formatNumber(variables('Total'),'N0')}</b></p>
-     <p><a href="https://wzfs-ict.github.io/purchase-requests/">Open the report</a></p>
-     ```
+**Save**, then **Test → Manually → Run flow**. You'll only get an email if something has been submitted in the last day.
 
 ---
 
-## Testing
-Open each flow and click **Test → Manually**. For Flow 1, submit a test item first. For Flow 2, the Principal must forward one first. Check the email arrives and the table looks right, then delete the test items.
+## Flow 2: Monday reminder to the Chairman
 
-## Optional extra (not built)
-**Tell HoDs the decision:** trigger *When an item is created or modified* on **Purchase Reviews**. Use the condition `ChairmanDecision` is not `Pending`, then **Get item** from Purchase Requests and email `Author/Email`. Ask if you want this added.
+**Create → Scheduled cloud flow**
+- Name: `Purchase Requests - Chairman reminder`
+- Repeat every **1 Week**
+- Click **Create**
+
+**1. Recurrence**
+- Time zone: **Beijing** (as above)
+- On these days: **Monday**
+- Hours `8`. Minutes `0`
+
+**2. SharePoint → Get items**
+- List Name: **Purchase Reviews**
+- Filter Query: `ForwardToChairman eq 1 and ChairmanDecision eq 'Pending'`
+- Order By: `ReqDepartment`
+- Top Count: `500`
+
+**3. Condition**
+- `length(outputs('Get_items')?['body/value'])` **is greater than** `0`
+
+**4. In True: Create HTML table**
+- From: **value** (from *Get items*)
+- Columns: **Custom**
+
+| Header | Value (expression) |
+|---|---|
+| Department | `item()?['ReqDepartment']` |
+| Item | `item()?['ReqItem']` |
+| Total ¥ | `formatNumber(item()?['ReqTotal'],'N0')` |
+| Principal | `item()?['PrincipalRecommendation']?['Value']` |
+| Comment | `item()?['PrincipalComment']` |
+
+**5. In True: Send an email (V2)**
+- To: `mlee@zhongshischool.org`
+- Subject: `Purchase requests awaiting your decision`
+- Body (code view):
+  ```html
+  <p>Good morning,</p>
+  <p>These purchase requests have been reviewed by the Principal and are waiting for your decision:</p>
+  @{body('Create_HTML_table')}
+  <p><a href="https://wzfs-ict.github.io/purchase-requests/">Open the report</a></p>
+  ```
+
+**Save**, then **Test → Manually**. You'll get an email once the Principal has forwarded at least one item.
+
+---
+
+## If something goes wrong
+- **"Get items" error on Filter Query:** check the quotes. Text values need single quotes (`'Submitted'`), and the date expression must sit between `'` and `'`.
+- **Empty table cells:** check the column name in the expression. Names are case-sensitive: `LineTotal`, `ReqTotal`, and so on.
+- **The email shows `@{body(...)}` as plain text:** you pasted it outside code view. Delete it, insert **Create HTML table → Output** from dynamic content instead.
