@@ -16,8 +16,8 @@ window.APP_CONFIG = {
 
   // Optional: paste the IDs shown on the Setup tab after the lists are created.
   // Filling these in makes the page load faster for HoDs.
-  siteId: "",
-  requestsListId: "",
+  siteId: "weihaizhongshi.sharepoint.com,3b2bbc14-1822-46d3-9e63-4eb8e7bb3072,dc8df276-ddfb-46e7-827c-d94e1302cbf9",
+  requestsListId: "1f34f3e4-59fe-41a6-bd80-6fb8bec6a28f",
 
   requestsList: "Purchase Requests",
   reviewsList: "Purchase Reviews",
