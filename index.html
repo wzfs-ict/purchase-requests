@@ -84,6 +84,7 @@
   ol.steps li { margin-bottom: 10px; }
   code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
   .print-only { display: none; }
+  .site-footer { max-width: 1200px; margin: 0 auto; padding: 16px 16px 28px; text-align: center; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border); }
   @media (max-width: 640px) { th, td { padding: 7px 8px; } .stat .v { font-size: 19px; } }
   @media print {
     body { background: #fff; color: #000; font-size: 12px; }
@@ -106,6 +107,7 @@
   <nav class="tabs" id="tabs"></nav>
 </header>
 <main id="main"><div class="center muted">Loading…</div></main>
+<footer class="site-footer no-print">Mr Glen Joshua (Fall 2026) · V1 · Uses Zhongshi Microsoft SharePoint as database</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1202,11 +1204,21 @@ const BIND = { mine: bindMine, new: bindForm, review: bindReview, report: bindRe
 
 // ── Start ───────────────────────────────────────────────────
 function signInScreen(extra) {
-  $("#main").innerHTML = `<div class="center">
+  $("#main").innerHTML = `<div class="center" style="padding-bottom:24px">
     <h1>WZFS Purchase Requests</h1>
-    <p class="lede">HoDs submit purchase requests. The Principal reviews them and the Chairman decides.</p>
+    <p class="lede">One place to request, track and approve department purchases.</p>
     ${extra || ""}
-    <button class="btn primary" id="signIn">Sign in with your school Microsoft account</button></div>`;
+    <button class="btn primary" id="signIn">Sign in with your school Microsoft account</button></div>
+    <div class="card" style="max-width:620px;margin:0 auto">
+      <h2 style="margin-top:0">How it works</h2>
+      <ol class="steps" style="margin-bottom:0">
+        <li><strong>Sign in</strong> with your school Microsoft account (name@zhongshischool.org).</li>
+        <li>Click <strong>New request</strong>. Choose the academic year and semester, then add one card per item: name, category, quantity, unit price, priority and a short reason. Add a supplier link or a quote link if you have one.</li>
+        <li><strong>Save as draft</strong> to finish later, or <strong>Submit</strong> when it’s ready.</li>
+        <li>Track everything under <strong>My requests</strong>. You can edit or delete your own items, and download them as Excel.</li>
+      </ol>
+      <p class="small muted" style="margin-bottom:0">Your requests are private: only you and school leadership can see them.</p>
+    </div>`;
   $("#signIn").onclick = () => pca.loginRedirect({ scopes: SCOPES, prompt: "select_account" });
 }
 
