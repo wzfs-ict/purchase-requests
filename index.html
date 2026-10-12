@@ -332,6 +332,7 @@ function mapReview(it) {
   return {
     id: String(it.id), requestId: String(f.RequestId || ""),
     rec: f.PrincipalRecommendation || "", comment: f.PrincipalComment || "", forward: !!f.ForwardToChairman,
+    recAmount: f.RecommendedAmount ?? "",
     decision: f.ChairmanDecision || "Pending", approved: f.ApprovedAmount ?? "", note: f.ChairmanNote || "",
     decidedAt: f.DecidedAt || "", decidedVersion: f.DecidedRequestVersion || "", decidedBy: f.DecidedBy || "",
   };
@@ -388,7 +389,7 @@ function saveReview(requestId, patch) {
 }
 function toReviewFields(r) {
   return {
-    RequestId: Number(r.requestId), PrincipalRecommendation: r.rec, PrincipalComment: r.comment,
+    RequestId: Number(r.requestId), PrincipalRecommendation: r.rec, PrincipalComment: r.comment, RecommendedAmount: r.recAmount,
     ForwardToChairman: r.forward, ChairmanDecision: r.decision, ApprovedAmount: r.approved,
     ChairmanNote: r.note, DecidedAt: r.decidedAt, DecidedRequestVersion: r.decidedVersion, DecidedBy: r.decidedBy,
   };
@@ -718,8 +719,10 @@ function reviewRow(r, readOnly) {
     <td class="num">${r.qty} × ${money(r.unit)}</td>
     <td class="num"><strong>${money(r.total)}</strong></td>
     <td>${priorityBadge(r.priority)}</td>
-    <td>${readOnly ? `${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : `<span class="muted small">No comment yet</span>`}<div class="small reason">${esc(v.comment)}</div>` : `
+    <td>${readOnly ? `${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : `<span class="muted small">No comment yet</span>`}${recAmountNote(r)}<div class="small reason">${esc(v.comment)}</div>` : `
       <select data-f="PrincipalRecommendation"><option value="">— Recommendation —</option>${opts(C.recommendations, v.rec)}</select>
+      <label style="margin-top:6px;display:flex;align-items:center;gap:6px"><span style="margin:0;white-space:nowrap">Recommended ¥</span>
+        <input type="number" min="0" step="0.01" data-f="RecommendedAmount" value="${esc(v.recAmount ?? "")}" placeholder="${esc(r.total)}" title="Leave empty to recommend the full amount" style="text-align:right"></label>
       <textarea data-f="PrincipalComment" placeholder="Comment for the Chairman" style="margin-top:6px;min-height:44px">${esc(v.comment)}</textarea>
       <div class="saving" data-saving></div>`}</td>
     <td style="text-align:center">${readOnly ? (v.forward ? "✓" : "") : `<input type="checkbox" data-f="ForwardToChairman" style="width:18px;height:18px"${v.forward ? " checked" : ""}>`}</td>
@@ -763,7 +766,15 @@ function bindReview(root) {
 
 // ── Chairman report ─────────────────────────────────────────
 const isApproved = d => d === "Approved" || d === "Approved with changes";
-const approvedAmt = r => { const v = reviewOf(r.id); return isApproved(v.decision) ? (v.approved === "" || v.approved == null ? r.total : Number(v.approved) || 0) : 0; };
+const hasNum = x => x !== "" && x != null;
+// What the Principal recommends: their adjusted amount, or the full request if they didn't change it.
+const recAmt = r => { const v = reviewOf(r.id); return hasNum(v.recAmount) ? Number(v.recAmount) || 0 : r.total; };
+const recAmountNote = r => {
+  const v = reviewOf(r.id);
+  return hasNum(v.recAmount) && Number(v.recAmount) !== r.total
+    ? `<div class="small"><strong>Recommended ${money(v.recAmount)}</strong> <span class="muted">(requested ${money(r.total)})</span></div>` : "";
+};
+const approvedAmt = r => { const v = reviewOf(r.id); return isApproved(v.decision) ? (hasNum(v.approved) ? Number(v.approved) || 0 : recAmt(r)) : 0; };
 
 function summarize(list) {
   const rows = C.departments.map(d => {
@@ -771,7 +782,7 @@ function summarize(list) {
     return {
       department: d, items: rs.length,
       requested: rs.reduce((s, r) => s + r.total, 0),
-      recommended: rs.filter(r => /^Recommend/.test(reviewOf(r.id).rec)).reduce((s, r) => s + r.total, 0),
+      recommended: rs.filter(r => /^Recommend/.test(reviewOf(r.id).rec)).reduce((s, r) => s + recAmt(r), 0),
       approved: rs.reduce((s, r) => s + approvedAmt(r), 0),
       pending: rs.filter(r => reviewOf(r.id).decision === "Pending").length,
       rejected: rs.filter(r => reviewOf(r.id).decision === "Rejected").length,
@@ -836,11 +847,11 @@ function decisionRow(r, canDecide) {
       <div class="small muted">${esc(r.category)} · ${r.qty} × ${money(r.unit)} · ${esc(r.semester)} ${esc(r.year)}${r.supplier ? " · " + esc(r.supplier) : ""}${link(r.quote, "quote") ? " · " + link(r.quote, "quote") : ""}</div>
       <div class="small reason">${esc(r.reason)}</div></td>
     <td class="num"><strong>${money(r.total)}</strong></td>
-    <td>${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : ""}<div class="small reason">${esc(v.comment)}</div></td>
+    <td>${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : ""}${recAmountNote(r)}<div class="small reason">${esc(v.comment)}</div></td>
     <td>${canDecide ? `<select data-f="ChairmanDecision">${opts(C.decisions, v.decision)}</select><div class="saving" data-saving></div>`
       : `<span class="badge ${cls}">${esc(v.decision)}</span>`}
       ${v.decision !== "Pending" && v.decidedBy ? `<div class="small muted">by ${esc(v.decidedBy)}${v.decidedAt ? ", " + fmtDate(v.decidedAt) : ""}</div>` : ""}</td>
-    <td class="num">${canDecide ? `<input type="number" min="0" step="0.01" data-f="ApprovedAmount" value="${isApproved(v.decision) ? esc(v.approved === "" || v.approved == null ? r.total : v.approved) : ""}"${isApproved(v.decision) ? "" : " disabled"}>`
+    <td class="num">${canDecide ? `<input type="number" min="0" step="0.01" data-f="ApprovedAmount" value="${isApproved(v.decision) ? esc(approvedAmt(r)) : ""}"${isApproved(v.decision) ? "" : " disabled"}>`
       : (isApproved(v.decision) ? money(approvedAmt(r)) : "")}</td>
     <td>${canDecide ? `<textarea data-f="ChairmanNote" style="min-height:38px">${esc(v.note)}</textarea>` : `<span class="small">${esc(v.note)}</span>`}</td>
   </tr>`;
@@ -855,7 +866,7 @@ function bindReport(root) {
         const d = el.value, decided = d !== "Pending", prev = reviewOf(r.id);
         const keep = isApproved(prev.decision) && prev.approved !== "" && prev.approved != null;
         await saveField(el, {
-          ApprovedAmount: isApproved(d) ? (keep ? Number(prev.approved) : r.total) : (d === "Rejected" ? 0 : null),
+          ApprovedAmount: isApproved(d) ? (keep ? Number(prev.approved) : recAmt(r)) : (d === "Rejected" ? 0 : null),
           DecidedAt: decided ? new Date().toISOString() : null,
           DecidedRequestVersion: decided ? r.modified : "",
           DecidedBy: decided ? S.name : "",
@@ -891,7 +902,7 @@ function exportExcel(list, withReview) {
     };
     if (!withReview) return base;
     const v = reviewOf(r.id);
-    return { ...base, "Principal recommendation": v.rec, "Principal comment": v.comment, "Forwarded": v.forward ? "Yes" : "No",
+    return { ...base, "Principal recommendation": v.rec, "Principal recommended (¥)": /^Recommend/.test(v.rec) ? recAmt(r) : "", "Principal comment": v.comment, "Forwarded": v.forward ? "Yes" : "No",
       "Chairman decision": v.decision, "Decided by": v.decision !== "Pending" ? v.decidedBy : "", "Approved (¥)": isApproved(v.decision) ? approvedAmt(r) : "", "Chairman note": v.note };
   });
   const ws2 = XLSX.utils.json_to_sheet(items);
@@ -914,6 +925,7 @@ const REVIEW_COLUMNS = () => [
   { name: "RequestId", number: {} }, choice("PrincipalRecommendation", C.recommendations),
   { name: "PrincipalComment", text: { allowMultipleLines: true } }, { name: "ForwardToChairman", boolean: {} },
   { ...choice("ChairmanDecision", C.decisions), defaultValue: { value: "Pending" } }, { name: "ApprovedAmount", number: {} },
+  { name: "RecommendedAmount", number: {} },
   { name: "ChairmanNote", text: { allowMultipleLines: true } }, { name: "DecidedAt", dateTime: { format: "dateTime" } },
   { name: "DecidedRequestVersion", text: {} }, { name: "DecidedBy", text: {} },
   ...REVIEW_SNAPSHOT_COLUMNS,
