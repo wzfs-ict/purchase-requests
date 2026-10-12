@@ -33,6 +33,7 @@ window.APP_CONFIG = {
   ],
   chairmen: [
     "mlee@zhongshischool.org",
+    "dlee@zhongshischool.org",   // Daniel Lee, Vice President (Chairman's son)
   ],
   admins: [
     "glenj@zhongshischool.org",
@@ -54,6 +55,7 @@ window.APP_CONFIG = {
   names: {
     "asumeg-ang@zhongshischool.org": "Arsenio Sumeg-ang",
     "mlee@zhongshischool.org": "Moody Lee",
+    "dlee@zhongshischool.org": "Daniel Lee",
     "b_reacher@zhongshischool.org": "Bijily Reacher",
     "breacher@zhongshischool.org": "Bijily Reacher",
     "jpatole@zhongshischool.org": "Jayesh Patole",
