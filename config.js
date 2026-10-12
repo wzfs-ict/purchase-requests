@@ -53,6 +53,8 @@ window.APP_CONFIG = {
     "mparker@zhongshischool.org": "Mae Parker",
     "xtobias@zhongshischool.org": "Xochitl Tobias",
     "rrussell@zhongshischool.org": "Roger Russell",
+    "mkkim@zhongshischool.org": "Andy Kim",
+    "babuan@zhongshischool.org": "Beverly Abuan",
   },
 
   // ── Lists used in the form ───────────────────────────────
