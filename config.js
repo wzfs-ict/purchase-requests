@@ -21,6 +21,11 @@ window.APP_CONFIG = {
 
   requestsList: "Purchase Requests",
   reviewsList: "Purchase Reviews",
+  settingsList: "Purchase Settings",   // people, departments, budget periods — edited on the Manage tab
+  budgetsList: "Purchase Budgets",     // budget amounts per department — edited on the Manage tab
+
+  // NOTE: once someone saves on the Manage tab, the people / departments / periods saved
+  // there replace the ones below. The values below are only the starting point.
 
   // ── People ───────────────────────────────────────────────
   principals: [
