@@ -333,7 +333,7 @@ function mapReview(it) {
     id: String(it.id), requestId: String(f.RequestId || ""),
     rec: f.PrincipalRecommendation || "", comment: f.PrincipalComment || "", forward: !!f.ForwardToChairman,
     decision: f.ChairmanDecision || "Pending", approved: f.ApprovedAmount ?? "", note: f.ChairmanNote || "",
-    decidedAt: f.DecidedAt || "", decidedVersion: f.DecidedRequestVersion || "",
+    decidedAt: f.DecidedAt || "", decidedVersion: f.DecidedRequestVersion || "", decidedBy: f.DecidedBy || "",
   };
 }
 
@@ -390,7 +390,7 @@ function toReviewFields(r) {
   return {
     RequestId: Number(r.requestId), PrincipalRecommendation: r.rec, PrincipalComment: r.comment,
     ForwardToChairman: r.forward, ChairmanDecision: r.decision, ApprovedAmount: r.approved,
-    ChairmanNote: r.note, DecidedAt: r.decidedAt, DecidedRequestVersion: r.decidedVersion,
+    ChairmanNote: r.note, DecidedAt: r.decidedAt, DecidedRequestVersion: r.decidedVersion, DecidedBy: r.decidedBy,
   };
 }
 const reviewOf = id => S.reviews.get(String(id)) || { rec: "", comment: "", forward: false, decision: "Pending", approved: "", note: "", decidedVersion: "" };
@@ -833,7 +833,8 @@ function decisionRow(r, canDecide) {
     <td class="num"><strong>${money(r.total)}</strong></td>
     <td>${v.rec ? `<span class="badge info">${esc(v.rec)}</span>` : ""}<div class="small reason">${esc(v.comment)}</div></td>
     <td>${canDecide ? `<select data-f="ChairmanDecision">${opts(C.decisions, v.decision)}</select><div class="saving" data-saving></div>`
-      : `<span class="badge ${cls}">${esc(v.decision)}</span>`}</td>
+      : `<span class="badge ${cls}">${esc(v.decision)}</span>`}
+      ${v.decision !== "Pending" && v.decidedBy ? `<div class="small muted">by ${esc(v.decidedBy)}${v.decidedAt ? ", " + fmtDate(v.decidedAt) : ""}</div>` : ""}</td>
     <td class="num">${canDecide ? `<input type="number" min="0" step="0.01" data-f="ApprovedAmount" value="${isApproved(v.decision) ? esc(v.approved === "" || v.approved == null ? r.total : v.approved) : ""}"${isApproved(v.decision) ? "" : " disabled"}>`
       : (isApproved(v.decision) ? money(approvedAmt(r)) : "")}</td>
     <td>${canDecide ? `<textarea data-f="ChairmanNote" style="min-height:38px">${esc(v.note)}</textarea>` : `<span class="small">${esc(v.note)}</span>`}</td>
@@ -852,6 +853,7 @@ function bindReport(root) {
           ApprovedAmount: isApproved(d) ? (keep ? Number(prev.approved) : r.total) : (d === "Rejected" ? 0 : null),
           DecidedAt: decided ? new Date().toISOString() : null,
           DecidedRequestVersion: decided ? r.modified : "",
+          DecidedBy: decided ? S.name : "",
         });
         render(); // refresh totals and the approved-amount box
       });
@@ -885,7 +887,7 @@ function exportExcel(list, withReview) {
     if (!withReview) return base;
     const v = reviewOf(r.id);
     return { ...base, "Principal recommendation": v.rec, "Principal comment": v.comment, "Forwarded": v.forward ? "Yes" : "No",
-      "Chairman decision": v.decision, "Approved (¥)": isApproved(v.decision) ? approvedAmt(r) : "", "Chairman note": v.note };
+      "Chairman decision": v.decision, "Decided by": v.decision !== "Pending" ? v.decidedBy : "", "Approved (¥)": isApproved(v.decision) ? approvedAmt(r) : "", "Chairman note": v.note };
   });
   const ws2 = XLSX.utils.json_to_sheet(items);
   XLSX.utils.book_append_sheet(wb, ws2, "Items");
@@ -908,7 +910,7 @@ const REVIEW_COLUMNS = () => [
   { name: "PrincipalComment", text: { allowMultipleLines: true } }, { name: "ForwardToChairman", boolean: {} },
   { ...choice("ChairmanDecision", C.decisions), defaultValue: { value: "Pending" } }, { name: "ApprovedAmount", number: {} },
   { name: "ChairmanNote", text: { allowMultipleLines: true } }, { name: "DecidedAt", dateTime: { format: "dateTime" } },
-  { name: "DecidedRequestVersion", text: {} },
+  { name: "DecidedRequestVersion", text: {} }, { name: "DecidedBy", text: {} },
   ...REVIEW_SNAPSHOT_COLUMNS,
 ];
 const SETTINGS_COLUMNS = () => [{ name: "SettingsJson", text: { allowMultipleLines: true, textType: "plain" } }];
