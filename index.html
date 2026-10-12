@@ -367,6 +367,9 @@ const deleteRequest = id => graph("DELETE", `/sites/${S.siteId}/lists/${S.reqLis
 // Review saves are queued per request so two quick edits never create two review rows.
 const reviewQueue = new Map();
 function saveReview(requestId, patch) {
+  // Copy the request's key details onto the review so Power Automate can report from this one list.
+  const req = S.requests.find(r => r.id === String(requestId));
+  if (req) patch = { ...patch, ReqDepartment: req.department, ReqItem: req.item, ReqTotal: req.total };
   const prev = reviewQueue.get(requestId) || Promise.resolve();
   const next = prev.catch(() => {}).then(async () => {
     const existing = S.reviews.get(requestId);
@@ -892,6 +895,7 @@ function exportExcel(list, withReview) {
 
 // ── Setup (admins) ──────────────────────────────────────────
 const choice = (name, choices) => ({ name, choice: { choices, displayAs: "dropDownMenu" } });
+const REVIEW_SNAPSHOT_COLUMNS = [{ name: "ReqDepartment", text: {} }, { name: "ReqItem", text: {} }, { name: "ReqTotal", number: {} }];
 const REQUEST_COLUMNS = () => [
   choice("Department", C.departments), { name: "AcademicYear", text: {} }, choice("Semester", C.semesters),
   choice("Category", C.categories), { name: "Quantity", number: {} }, { name: "UnitPrice", number: {} },
@@ -905,6 +909,7 @@ const REVIEW_COLUMNS = () => [
   { ...choice("ChairmanDecision", C.decisions), defaultValue: { value: "Pending" } }, { name: "ApprovedAmount", number: {} },
   { name: "ChairmanNote", text: { allowMultipleLines: true } }, { name: "DecidedAt", dateTime: { format: "dateTime" } },
   { name: "DecidedRequestVersion", text: {} },
+  ...REVIEW_SNAPSHOT_COLUMNS,
 ];
 const SETTINGS_COLUMNS = () => [{ name: "SettingsJson", text: { allowMultipleLines: true, textType: "plain" } }];
 const BUDGET_COLUMNS = () => [
