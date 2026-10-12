@@ -1,6 +1,6 @@
 # Power Automate flows
 
-| Flow | When | To | What |
+| Flow | When | To (Teams chat) | What |
 |---|---|---|---|
 | 1. Daily digest | Weekdays 15:30 Beijing | Principal (asumeg-ang@) | New requests submitted since the last digest, as a table with the total |
 | 2. Chairman reminder | Mondays 08:00 Beijing | Chairman (mlee@) | Forwarded items still **Pending**, as a table with the total |
@@ -52,18 +52,12 @@ Each flow has only 5 steps. Build them while signed in as **glenj@** (a site own
 | Reason | `item()?['Reason']` |
 | From | `item()?['Author']?['DisplayName']` |
 
-**5. In True: + → Office 365 Outlook → Send an email (V2)**
-- To: `asumeg-ang@zhongshischool.org`
-- Subject: `New purchase requests to review`
-- Body: click **</>** (code view) and paste:
-  ```html
-  <p>Dear Mr Sumeg-ang,</p>
-  <p>These purchase requests were submitted since the last digest:</p>
-  @{body('Create_HTML_table')}
-  <p><a href="https://wzfs-ict.github.io/purchase-requests/">Open Purchase Requests to review</a></p>
-  ```
+**5. In True: + → Microsoft Teams → Post message in a chat or channel**
+- Post as: **Flow bot**. Post in: **Chat with Flow bot**
+- Recipient: `asumeg-ang@zhongshischool.org`
+- Message: type `New purchase requests to review:`, press **Enter**, click **⚡** and choose **Output** (from *Create HTML table*), press **Enter**, then type `Open: https://wzfs-ict.github.io/purchase-requests/`
 
-**Save**, then **Test → Manually → Run flow**. You'll only get an email if something has been submitted in the last day.
+**Save**, then **Test → Manually → Run flow**. A Teams message is only sent if something was submitted in the last day.
 
 ---
 
@@ -100,22 +94,16 @@ Each flow has only 5 steps. Build them while signed in as **glenj@** (a site own
 | Principal | `item()?['PrincipalRecommendation']?['Value']` |
 | Comment | `item()?['PrincipalComment']` |
 
-**5. In True: Send an email (V2)**
-- To: `mlee@zhongshischool.org`
-- Subject: `Purchase requests awaiting your decision`
-- Body (code view):
-  ```html
-  <p>Good morning,</p>
-  <p>These purchase requests have been reviewed by the Principal and are waiting for your decision:</p>
-  @{body('Create_HTML_table')}
-  <p><a href="https://wzfs-ict.github.io/purchase-requests/">Open the report</a></p>
-  ```
+**5. In True: Microsoft Teams → Post message in a chat or channel**
+- Post as: **Flow bot**. Post in: **Chat with Flow bot**
+- Recipient: `mlee@zhongshischool.org`
+- Message: type `Good morning. These purchase requests are waiting for your decision:`, press **Enter**, click **⚡** and choose **Output**, press **Enter**, then type `Open: https://wzfs-ict.github.io/purchase-requests/`
 
-**Save**, then **Test → Manually**. You'll get an email once the Principal has forwarded at least one item.
+**Save**, then **Test → Manually**. A Teams message is sent once the Principal has forwarded at least one item.
 
 ---
 
 ## If something goes wrong
 - **"Get items" error on Filter Query:** check the quotes. Text values need single quotes (`'Submitted'`), and the date expression must sit between `'` and `'`.
 - **Empty table cells:** check the column name in the expression. Names are case-sensitive: `LineTotal`, `ReqTotal`, and so on.
-- **The email shows `@{body(...)}` as plain text:** you pasted it outside code view. Delete it, insert **Create HTML table → Output** from dynamic content instead.
+- **Why Teams and not email:** the school's mail runs on its own server (mail.zhongshischool.org), not Microsoft 365. An Outlook-connector email would land in a Microsoft 365 inbox nobody reads.
