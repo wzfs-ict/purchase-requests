@@ -8,7 +8,7 @@ window.APP_CONFIG = {
 
   // Microsoft Entra (Azure AD) app registration — see README step 2
   tenantId: "59aaa89c-ebfe-417a-bcdf-21065b509cf4",
-  clientId: "PASTE-YOUR-APPLICATION-CLIENT-ID-HERE",
+  clientId: "84ebbd52-29fd-48fa-802c-5378884994b5",
 
   // The private SharePoint site that stores the data — see README step 1
   siteHostname: "weihaizhongshi.sharepoint.com",
