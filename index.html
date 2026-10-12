@@ -344,6 +344,7 @@ async function refresh(msg) {
     await loadData();
     if (msg) S.flash = msg;
   } catch (e) {
+    if (S.isAdmin && e.setup && S.tab !== "setup") { S.tab = "setup"; renderShell(); }
     if (S.tab !== "setup") {
       $("#main").innerHTML = errorHtml(e);
       return;
@@ -822,11 +823,14 @@ function viewSetup() {
 
 function bindSetup(root) {
   const b = $("#createLists", root);
-  if (!b) return;
+  if (!b) { try { sessionStorage.removeItem("pr_createLists"); } catch (_) {} return; }
   b.onclick = async () => {
     b.disabled = true; b.textContent = "Creating…";
     try {
+      // Remember the click in case the consent prompt navigates away; we resume on return.
+      try { sessionStorage.setItem("pr_createLists", "1"); } catch (_) {}
       await token(SETUP_SCOPES);
+      try { sessionStorage.removeItem("pr_createLists"); } catch (_) {}
       const mk = (displayName, columns) => graph("POST", `/sites/${S.siteId}/lists`, { displayName, columns, list: { template: "genericList" } }, SETUP_SCOPES);
       if (!S.reqListId) await mk(C.requestsList, REQUEST_COLUMNS());
       if (!S.revListId) await mk(C.reviewsList, REVIEW_COLUMNS());
@@ -834,10 +838,14 @@ function bindSetup(root) {
       await resolveSite();
       S.flash = { type: "ok", text: "Lists created. Now finish step 2 below." };
     } catch (e) {
+      try { sessionStorage.removeItem("pr_createLists"); } catch (_) {}
       S.flash = { type: "error", text: "Could not create lists: " + e.message };
     }
     render();
   };
+  let resume = false;
+  try { resume = sessionStorage.getItem("pr_createLists") === "1"; } catch (_) {}
+  if (resume) b.click();
 }
 
 const BIND = { mine: bindMine, new: bindForm, review: bindReview, report: bindReport, setup: bindSetup };
