@@ -34,7 +34,8 @@ window.APP_CONFIG = {
   ],
   // Optional: fixes each HoD to their department so they can't pick another one.
   hods: {
-    "breacher@zhongshischool.org": "Mathematics",   // Bijily Reacher
+    "breacher@zhongshischool.org": "Mathematics",   // Bijily Reacher (alias in staff list)
+    "b_reacher@zhongshischool.org": "Mathematics",  // Bijily Reacher (actual account — keep last)
     "jpatole@zhongshischool.org": "Science",        // Jayesh Patole
     "mparker@zhongshischool.org": "Humanities",     // Mae Parker
     "xtobias@zhongshischool.org": "Primary",        // Xochitl Tobias, VP Primary
@@ -46,6 +47,7 @@ window.APP_CONFIG = {
   names: {
     "asumeg-ang@zhongshischool.org": "Arsenio Sumeg-ang",
     "mlee@zhongshischool.org": "Moody Lee",
+    "b_reacher@zhongshischool.org": "Bijily Reacher",
     "breacher@zhongshischool.org": "Bijily Reacher",
     "jpatole@zhongshischool.org": "Jayesh Patole",
     "mparker@zhongshischool.org": "Mae Parker",
