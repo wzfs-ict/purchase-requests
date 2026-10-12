@@ -198,13 +198,33 @@ function detectRole() {
   S.isAdmin = C.admins.map(lc).includes(e);
   if (C.chairmen.map(lc).includes(e)) S.role = "chairman";
   else if (C.principals.map(lc).includes(e)) S.role = "principal";
+  else if (S.isAdmin) S.role = "admin";
   else S.role = "hod";
 }
-const role = () => S.viewAs || S.role;
-const lockedDept = () => {
-  const m = Object.fromEntries(Object.entries(C.hods || {}).map(([k, v]) => [lc(k), v]));
-  return m[S.email] || "";
-};
+// S.viewAs (admins only) = { role, email, dept, label } — a read-only preview of someone else's screen.
+const role = () => (S.viewAs ? S.viewAs.role : S.role);
+const preview = () => !!S.viewAs;
+const hodMap = () => Object.fromEntries(Object.entries(C.hods || {}).map(([k, v]) => [lc(k), v]));
+const personName = email => (C.names || {})[lc(email)] || email;
+const lockedDept = () => (S.viewAs && S.viewAs.role === "hod" ? S.viewAs.dept : hodMap()[S.email] || "");
+
+function viewAsOptions() {
+  const o = [{ key: "", label: "Admin (me)" }];
+  C.principals.forEach(e => o.push({ key: "principal|" + lc(e), role: "principal", email: lc(e), label: "Principal – " + personName(e) }));
+  C.chairmen.forEach(e => o.push({ key: "chairman|" + lc(e), role: "chairman", email: lc(e), label: "Chairman – " + personName(e) }));
+  const byDept = Object.fromEntries(Object.entries(hodMap()).map(([e, d]) => [d, e]));
+  C.departments.forEach(d => {
+    const e = byDept[d] || "";
+    o.push({ key: "hod|" + e + "|" + d, role: "hod", email: e, dept: d, label: `HoD ${d} – ${e ? personName(e) : "not assigned"}` });
+  });
+  return o;
+}
+// Which requests belong to the HoD being previewed.
+function belongsToPreviewHod(r) {
+  const v = S.viewAs;
+  if (v.email && r.authorEmail) return r.authorEmail === v.email;
+  return r.department === v.dept;
+}
 
 // ── Data ────────────────────────────────────────────────────
 async function resolveSite() {
@@ -306,19 +326,24 @@ const TABS = {
   hod: [["mine", "My requests"], ["new", "New request"]],
   principal: [["review", "Review requests"], ["report", "Chairman report"]],
   chairman: [["report", "Report & decisions"], ["review", "All requests"]],
+  admin: [["review", "All requests"], ["report", "Chairman report"]],
 };
-const ROLE_LABEL = { hod: "Head of Department", principal: "Principal", chairman: "Chairman" };
+const ROLE_LABEL = { hod: "Head of Department", principal: "Principal", chairman: "Chairman", admin: "Admin" };
 
 function renderShell() {
   $("#schoolName").textContent = C.schoolName;
   if (!S.account) { $("#who").textContent = ""; $("#authBtn").innerHTML = ""; $("#tabs").innerHTML = ""; return; }
-  $("#who").innerHTML = `${esc(S.name)} · <span class="badge info">${ROLE_LABEL[role()]}</span>` +
-    (S.isAdmin ? ` <select id="viewAs" class="small" style="width:auto;padding:2px 6px" title="Preview the page as another role (does not change what SharePoint lets you see)">
-      <option value="">View as: me</option>${["hod", "principal", "chairman"].map(r => `<option value="${r}"${S.viewAs === r ? " selected" : ""}>View as: ${ROLE_LABEL[r]}</option>`).join("")}</select>` : "");
+  const cur = S.viewAs ? S.viewAs.key : "";
+  $("#who").innerHTML = `${esc(S.name)} · <span class="badge ${preview() ? "warn" : "info"}">${preview() ? "Previewing" : ROLE_LABEL[S.role]}</span>` +
+    (S.isAdmin ? ` <select id="viewAs" class="small" style="width:auto;padding:2px 6px" title="Read-only preview of someone else's dashboard">
+      ${viewAsOptions().map(o => `<option value="${esc(o.key)}"${o.key === cur ? " selected" : ""}>View as: ${esc(o.label)}</option>`).join("")}</select>` : "");
   $("#authBtn").innerHTML = `<button class="btn small" id="signOut">Sign out</button>`;
   $("#signOut").onclick = () => pca.logoutRedirect({ account: S.account });
-  if ($("#viewAs")) $("#viewAs").onchange = async e => { S.viewAs = e.target.value || null; S.tab = null; await refresh(); };
-  const tabs = TABS[role()].concat(S.isAdmin ? [["setup", "Setup"]] : []);
+  if ($("#viewAs")) $("#viewAs").onchange = async e => {
+    S.viewAs = viewAsOptions().find(o => o.key && o.key === e.target.value) || null;
+    S.tab = null; editing = null; await refresh();
+  };
+  const tabs = TABS[role()].concat(S.isAdmin && !preview() ? [["setup", "Setup"]] : []);
   if (!S.tab || !tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $("#tabs").innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}"${k === S.tab ? ' aria-current="page"' : ""}>${l}</button>`).join("");
   $$("#tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; S.flash = null; renderShell(); render(); });
@@ -333,7 +358,14 @@ function flashHtml() {
 function render() {
   const m = $("#main");
   const views = { mine: viewMine, new: viewForm, review: viewReview, report: viewReport, setup: viewSetup };
-  m.innerHTML = flashHtml() + views[S.tab]();
+  const banner = preview()
+    ? `<div class="notice warn no-print">Preview of <strong>${esc(S.viewAs.label)}</strong>’s dashboard — read only. Nothing you do here is saved. <button class="btn small" id="exitPreview" style="margin-left:8px">Back to Admin</button></div>`
+    : "";
+  m.innerHTML = banner + flashHtml() + views[S.tab]();
+  if (preview()) {
+    $("#exitPreview", m).onclick = async () => { S.viewAs = null; S.tab = null; await refresh(); };
+    $$("[data-f], #reqForm input, #reqForm select, #reqForm textarea, #reqForm button", m).forEach(el => el.disabled = true);
+  }
   (BIND[S.tab] || (() => {}))(m);
 }
 
@@ -390,7 +422,7 @@ const periodLabel = () => [S.filters.year === "All" ? "All years" : S.filters.ye
 
 // ── HoD: my requests ────────────────────────────────────────
 function viewMine() {
-  const mine = applyFilters(S.requests, { dept: false });
+  const mine = applyFilters(preview() ? S.requests.filter(belongsToPreviewHod) : S.requests, { dept: false });
   const drafts = mine.filter(r => r.status === "Draft");
   const total = mine.reduce((s, r) => s + r.total, 0);
   const submitted = mine.filter(r => r.status === "Submitted").reduce((s, r) => s + r.total, 0);
@@ -411,10 +443,10 @@ function viewMine() {
       <td class="num">${r.qty}</td><td class="num">${money(r.unit)}</td><td class="num"><strong>${money(r.total)}</strong></td>
       <td>${priorityBadge(r.priority)}</td>
       <td>${r.status === "Submitted" ? `<span class="badge ok">Submitted</span>` : `<span class="badge warn">Draft</span>`}</td>
-      <td style="white-space:nowrap">
+      <td style="white-space:nowrap">${preview() ? "" : `
         <button class="btn small" data-edit="${r.id}">Edit</button>
         ${r.status === "Draft" ? `<button class="btn small" data-submit="${r.id}">Submit</button>` : ""}
-        <button class="btn small danger" data-del="${r.id}">Delete</button></td>
+        <button class="btn small danger" data-del="${r.id}">Delete</button>`}</td>
     </tr>`).join("")}
     <tr class="total"><td colspan="5">Total</td><td class="num">${money(total)}</td><td colspan="3"></td></tr>
     </tbody></table></div>` : `<div class="card center muted">No requests for this period yet.</div>`}
@@ -563,7 +595,7 @@ function bindMine(root) {
 const submitted = () => S.requests.filter(r => r.status === "Submitted");
 
 function viewReview() {
-  const readOnly = role() !== "principal";
+  const readOnly = role() !== "principal" || preview();
   if (!S.revListId) return `<div class="notice warn">The “${esc(C.reviewsList)}” list was not found, so comments can’t be saved. Run Setup first.</div>`;
   const list = applyFilters(submitted());
   const total = list.reduce((s, r) => s + r.total, 0);
@@ -667,7 +699,7 @@ function summarize(list) {
 }
 
 function viewReport() {
-  const canDecide = role() === "chairman";
+  const canDecide = role() === "chairman" && !preview();
   if (!S.revListId) return `<div class="notice warn">The “${esc(C.reviewsList)}” list was not found. Run Setup first.</div>`;
   const list = applyFilters(submitted(), { forwarded: true });
   const { rows, tot } = summarize(list);
@@ -872,7 +904,7 @@ function signInScreen(extra) {
   S.email = lc(S.account.username);
   S.name = S.account.name || S.email;
   detectRole();
-  if (S.isAdmin && S.role === "hod" && !C.principals.length) S.tab = "setup";
+  if (S.role === "admin" && !C.principals.length) S.tab = "setup";
   await refresh();
 })();
 </script>

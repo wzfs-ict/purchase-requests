@@ -42,6 +42,17 @@ window.APP_CONFIG = {
     // "?@zhongshischool.org": "PE",                // PE HoD still to confirm
   },
 
+  // Display names used in the admin "View as" menu.
+  names: {
+    "asumeg-ang@zhongshischool.org": "Arsenio Sumeg-ang",
+    "mlee@zhongshischool.org": "Moody Lee",
+    "breacher@zhongshischool.org": "Bijily Reacher",
+    "jpatole@zhongshischool.org": "Jayesh Patole",
+    "mparker@zhongshischool.org": "Mae Parker",
+    "xtobias@zhongshischool.org": "Xochitl Tobias",
+    "rrussell@zhongshischool.org": "Roger Russell",
+  },
+
   // ── Lists used in the form ───────────────────────────────
   departments: ["PE", "Humanities", "Science", "Upper School", "Primary", "Mathematics"],
   academicYears: ["2026-27", "2027-28"],
