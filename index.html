@@ -415,7 +415,7 @@ function renderShell() {
   $("#schoolName").textContent = C.schoolName;
   if (!S.account) { $("#who").textContent = ""; $("#authBtn").innerHTML = ""; $("#tabs").innerHTML = ""; return; }
   const cur = S.viewAs ? S.viewAs.key : "";
-  $("#who").innerHTML = `${esc(S.name)} · <span class="badge ${preview() ? "warn" : "info"}">${preview() ? "Previewing" : ROLE_LABEL[S.role]}</span>` +
+  $("#who").innerHTML = `${esc(S.name)} · <span class="badge ${preview() || S.blocked ? "warn" : "info"}">${preview() ? "Previewing" : S.blocked ? "No access" : ROLE_LABEL[S.role]}</span>` +
     (S.isAdmin ? ` <select id="viewAs" class="small" style="width:auto;padding:2px 6px" title="Read-only preview of someone else's dashboard">
       ${viewAsOptions().map(o => `<option value="${esc(o.key)}"${o.key === cur ? " selected" : ""}>View as: ${esc(o.label)}</option>`).join("")}</select>` : "");
   $("#authBtn").innerHTML = `<button class="btn small" id="signOut">Sign out</button>`;
@@ -424,6 +424,7 @@ function renderShell() {
     S.viewAs = viewAsOptions().find(o => o.key && o.key === e.target.value) || null;
     S.tab = null; editing = null; await refresh();
   };
+  if (S.blocked) { $("#tabs").innerHTML = ""; return; }
   const tabs = TABS[role()].concat(S.isAdmin && !preview() ? [["setup", "Setup"]] : []);
   if (!S.tab || !tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $("#tabs").innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}"${k === S.tab ? ' aria-current="page"' : ""}>${l}</button>`).join("");
@@ -456,10 +457,13 @@ async function refresh(msg) {
   $("#main").innerHTML = `<div class="center muted">Loading requests…</div>`;
   try {
     await loadData();
+    S.blocked = false;
     if (msg) S.flash = msg;
   } catch (e) {
     if (S.isAdmin && e.setup && S.tab !== "setup") { S.tab = "setup"; renderShell(); }
     if (S.tab !== "setup") {
+      // Without access to the data, show only the message: no tabs, no form (admins keep tabs to reach Setup).
+      if (!S.isAdmin) { S.blocked = true; renderShell(); }
       $("#main").innerHTML = errorHtml(e);
       return;
     }
@@ -469,10 +473,11 @@ async function refresh(msg) {
 }
 
 function errorHtml(e) {
-  const hint = e.status === 403 || e.status === 404
-    ? "You may not have been given access to the purchase request site yet. Please contact the ICT coordinator."
+  const denied = e.status === 401 || e.status === 403 || e.status === 404;
+  const hint = denied
+    ? `You’re signed in as ${S.email}, but this account hasn’t been given access to Purchase Requests. If you’re a Head of Department, please contact Mr Glen Joshua (ICT). If you have another school account, sign out and sign in with that one.`
     : e.setup ? "An administrator needs to finish setup (Setup tab)." : "";
-  return `<div class="notice error">${esc(e.message)}</div><p class="muted">${esc(hint)}</p>` +
+  return `<div class="notice error">${denied ? "No access to Purchase Requests" : esc(e.message)}</div><p class="muted">${esc(hint)}</p>` +
     (S.isAdmin ? `<button class="btn" onclick="S.tab='setup';renderShell();render()">Open Setup</button>` : "");
 }
 
