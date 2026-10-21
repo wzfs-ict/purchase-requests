@@ -51,6 +51,7 @@ window.APP_CONFIG = {
     "schoi@zhongshischool.org": "Maintenance",      // Mr. Choi, Maintenance Head
     "jbkim@zhongshischool.org": "Administration",   // Keating Kim, Head of Administration
     "agong@zhongshischool.org": "Bobae Life",       // Alan Gong, Director of Bobae Life
+    "kfan@zhongshischool.org": "Accounts",          // Katie Fan, Head of Accounts
     // "?@zhongshischool.org": "PE",                // PE HoD still to confirm
   },
 
@@ -70,11 +71,12 @@ window.APP_CONFIG = {
     "schoi@zhongshischool.org": "Mr. Choi",
     "jbkim@zhongshischool.org": "Keating Kim",
     "agong@zhongshischool.org": "Alan Gong",
+    "kfan@zhongshischool.org": "Katie Fan",
   },
 
   // ── Lists used in the form ───────────────────────────────
   // If you add a department here, also add it to the Department column choices in the SharePoint list.
-  departments: ["PE", "Humanities", "Science", "Upper School", "Primary", "Mathematics", "Curriculum", "Communications", "Maintenance", "Administration", "Bobae Life"],
+  departments: ["PE", "Humanities", "Science", "Upper School", "Primary", "Mathematics", "Curriculum", "Communications", "Maintenance", "Administration", "Bobae Life", "Accounts"],
   academicYears: ["2026-27", "2027-28"],
   semesters: ["Fall", "Spring"],
   categories: ["Subscriptions", "Special Events", "Academic Materials", "Equipment", "Office Materials", "Other"],
